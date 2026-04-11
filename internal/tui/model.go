@@ -179,8 +179,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		h, v := m.styles.App.GetFrameSize()
-		// height - app padding - tab line - separator line - footer - extra safety
-		listHeight := msg.Height - v - tabHeight - footerHeight - 1
+		// height - padding(v) - tabs(1) - separator(1) - help(1) - buffer(1)
+		listHeight := msg.Height - v - 4
+		if listHeight < 0 { listHeight = 0 }
 		
 		m.list.SetSize(msg.Width-h, listHeight)
 		m.viewport = viewport.New(msg.Width-h-4, msg.Height-v-8)
@@ -283,15 +284,18 @@ func (m Model) View() string {
 	}
 	tabRow := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 	
-	// 2. Full-width separator line
+	// 2. Full-width separator line (bulletproof approach)
 	h, _ := m.styles.App.GetFrameSize()
 	fullWidth := m.width - h
-	tabSeparator := m.styles.TabSeparator.Width(fullWidth).Render("")
+	if fullWidth < 0 { fullWidth = 0 }
+	
+	// Create a simple solid line for the separator
+	tabSeparator := m.styles.Dim.Render(strings.Repeat("─", fullWidth))
 
 	// 3. Help Footer
 	help := m.styles.Footer.Render("enter: run/view • x: exec • tab: switch • /: filter • q: quit")
 	
-	// 4. Final Assembly
+	// 4. Final Assembly (No extra newlines between components)
 	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, tabSeparator, m.list.View(), help)
 	
 	return m.styles.App.Render(content)
