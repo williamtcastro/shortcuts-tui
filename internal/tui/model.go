@@ -107,6 +107,8 @@ func New(items []list.Item, cfg config.Config) Model {
 
 	inactiveTabStyle := lipgloss.NewStyle().
 		Foreground(secondary).
+		Border(lipgloss.NormalBorder(), false, false, true, false).
+		BorderForeground(lipgloss.Color("none")). // Same height, invisible border
 		Padding(0, 2).
 		MarginRight(1)
 
@@ -301,9 +303,8 @@ func (m Model) View() string {
 	help := m.helpStyle.Render("enter: run/view • x: execute • tab: switch tab • /: search • q: quit")
 	
 	// Total deduction in WindowSizeMsg was 5 lines.
-	// This layout adds: tabRow (1) + empty line (1) + list (variable) + help (1) = 3 fixed lines + list.
-	// The list fills the remaining space allocated via SetSize.
-	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, "\n", m.list.View(), help)
+	// tabRow now has a border (height 1) + 1 line separator + list + 1 line separator + help
+	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, "\n", m.list.View(), "\n", help)
 	
 	return appStyle.Render(content)
 }
