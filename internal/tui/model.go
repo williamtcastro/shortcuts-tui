@@ -179,8 +179,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		h, v := m.styles.App.GetFrameSize()
-		// height - padding(v) - tabs(1) - separator(1) - help(1) - buffer(1)
-		listHeight := msg.Height - v - 4
+		// Overhead: v (2 padding) + tabs (1) + separator (1) + help (1) + 2 (JoinVertical newlines)
+		listHeight := msg.Height - v - 5
 		if listHeight < 0 { listHeight = 0 }
 		
 		m.list.SetSize(msg.Width-h, listHeight)
@@ -295,7 +295,7 @@ func (m Model) View() string {
 	// 3. Help Footer
 	help := m.styles.Footer.Render("enter: run/view • x: exec • tab: switch • /: filter • q: quit")
 	
-	// 4. Final Assembly (No extra newlines between components)
+	// 4. Final Assembly (JoinVertical adds 1 newline between each element)
 	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, tabSeparator, m.list.View(), help)
 	
 	return m.styles.App.Render(content)
