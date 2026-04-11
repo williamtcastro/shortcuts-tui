@@ -5,6 +5,15 @@
 A high-performance Terminal User Interface (TUI) for exploring, searching, and executing shell aliases and documentation guides.
  Built with Go and the Charm Bracelet [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework.
 
+## 🚀 Installation
+
+Install via Homebrew (macOS/Linux):
+
+```bash
+brew tap williamtcastro/tap
+brew install shortcuts-tui
+```
+
 ---
 
 > **Note:** This project was developed and documented with the assistance of AI (**Gemini CLI**).
