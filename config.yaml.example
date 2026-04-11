@@ -13,7 +13,7 @@ views:
       - "./docs"
 
 # Pagination style: "numeric" (e.g., 1/3) or "dots" (e.g., •●•)
-pagination: "numeric"
+pagination: "dots"
 
 # Automatically clear the terminal before running a shortcut
 auto_clear: false
