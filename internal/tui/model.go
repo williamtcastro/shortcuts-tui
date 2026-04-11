@@ -41,14 +41,12 @@ type Styles struct {
 }
 
 func DefaultStyles(cfg config.Config) Styles {
-	primary := lipgloss.Color(cfg.Theme.PrimaryColor)
-	secondary := lipgloss.Color(cfg.Theme.SecondaryColor)
-	text := lipgloss.Color(cfg.Theme.TextColor)
-	
-	// Specialized high-clarity colors
-	accent := lipgloss.Color("#f9e2af") // Yellow (Mocha)
-	mauve := lipgloss.Color("#cba6f7")  // Mauve (Mocha)
-	flamingo := lipgloss.Color("#f2cdcd") // Flamingo (Mocha)
+	primary := lipgloss.Color(cfg.Theme.Primary)
+	secondary := lipgloss.Color(cfg.Theme.Secondary)
+	text := lipgloss.Color(cfg.Theme.Text)
+	accent := lipgloss.Color(cfg.Theme.Accent)
+	mauve := lipgloss.Color(cfg.Theme.Mauve)
+	flamingo := lipgloss.Color(cfg.Theme.Flamingo)
 
 	return Styles{
 		App: lipgloss.NewStyle().Padding(1, 2),
@@ -141,8 +139,8 @@ func New(items []list.Item, cfg config.Config) Model {
 	s := DefaultStyles(cfg)
 	delegate := itemDelegate{
 		styles: s,
-		active: lipgloss.Color(cfg.Theme.PrimaryColor),
-		accent: lipgloss.Color("#f9e2af"), // Yellow
+		active: lipgloss.Color(cfg.Theme.Primary),
+		accent: lipgloss.Color(cfg.Theme.Accent),
 	}
 
 	l := list.New([]list.Item{}, delegate, 0, 0)

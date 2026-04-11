@@ -9,9 +9,12 @@ import (
 )
 
 type Theme struct {
-	PrimaryColor   string `mapstructure:"primary"`
-	SecondaryColor string `mapstructure:"secondary"`
-	TextColor      string `mapstructure:"text"`
+	Primary   string `mapstructure:"primary"`
+	Secondary string `mapstructure:"secondary"`
+	Text      string `mapstructure:"text"`
+	Accent    string `mapstructure:"accent"`
+	Mauve     string `mapstructure:"mauve"`
+	Flamingo  string `mapstructure:"flamingo"`
 }
 
 type ViewConfig struct {
@@ -43,10 +46,14 @@ func LoadConfig() Config {
 	}
 
 	viper.SetDefault("views", defaultViews)
+	
 	// Catppuccin Mocha Defaults
 	viper.SetDefault("theme.primary", "#a6e3a1")   // Green
 	viper.SetDefault("theme.secondary", "#6c7086") // Overlay0
 	viper.SetDefault("theme.text", "#cdd6f4")      // Text
+	viper.SetDefault("theme.accent", "#f9e2af")    // Yellow
+	viper.SetDefault("theme.mauve", "#cba6f7")     // Mauve
+	viper.SetDefault("theme.flamingo", "#f2cdcd")  // Flamingo
 
 	// Setup config file search paths
 	viper.SetConfigName("config")

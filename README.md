@@ -47,6 +47,9 @@ theme:
   primary: "#a6e3a1"   # Green (Tabs/Headers)
   secondary: "#6c7086" # Overlay0 (Dimmed text)
   text: "#cdd6f4"      # Text (Default text)
+  accent: "#f9e2af"    # Yellow (Active cursor)
+  mauve: "#cba6f7"     # Mauve (Descriptions)
+  flamingo: "#f2cdcd"  # Flamingo (Search bar)
 ```
 
 ### 3. Launch the TUI
