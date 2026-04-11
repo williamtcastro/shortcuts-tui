@@ -218,13 +218,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.list.SettingFilter() && len(m.config.Views) > 0 {
 			switch msg.String() {
 			case "tab", "l", "right":
-				m.activeTabIndex = (m.activeTabIndex + 1) % len(m.config.Views)
-				m.updateListForTab()
-				return m, nil
+				if m.activeTabIndex < len(m.config.Views)-1 {
+					m.activeTabIndex++
+					m.updateListForTab()
+					return m, nil
+				}
 			case "shift+tab", "h", "left":
-				m.activeTabIndex = (m.activeTabIndex - 1 + len(m.config.Views)) % len(m.config.Views)
-				m.updateListForTab()
-				return m, nil
+				if m.activeTabIndex > 0 {
+					m.activeTabIndex--
+					m.updateListForTab()
+					return m, nil
+				}
 			}
 		}
 
