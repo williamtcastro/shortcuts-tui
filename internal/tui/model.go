@@ -58,23 +58,28 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
-	title := i.Title()
-	desc := i.Description()
+	titleStr := i.Title()
+	descStr := i.Description()
+
+	// Base styles
+	titleStyle := lipgloss.NewStyle().Width(25)
+	descStyle := lipgloss.NewStyle()
 
 	if index == m.Index() {
 		// Active item styling
-		title = lipgloss.NewStyle().Foreground(d.activeColor).Bold(true).Render("󰄾 " + title)
-		desc = lipgloss.NewStyle().Foreground(d.inactiveColor).Render(desc)
+		title := titleStyle.Foreground(d.activeColor).Bold(true).Render("󰄾 " + titleStr)
+		desc := descStyle.Foreground(d.inactiveColor).Render(descStr)
 		
-		// Render the whole line with a subtle background
-		line := fmt.Sprintf("%-25s %s", title, desc)
+		// Join them and apply selection style to the whole line
+		line := lipgloss.JoinHorizontal(lipgloss.Center, title, " ", desc)
 		fmt.Fprint(w, d.selectionStyle.Render(line))
 	} else {
 		// Inactive item styling
-		title = "  " + title
-		desc = lipgloss.NewStyle().Foreground(d.inactiveColor).Faint(true).Render(desc)
-		line := fmt.Sprintf("%-25s %s", title, desc)
-		fmt.Fprint(w, lipgloss.NewStyle().PaddingLeft(2).Render(line))
+		title := titleStyle.PaddingLeft(2).Render(titleStr)
+		desc := descStyle.Foreground(d.inactiveColor).Faint(true).Render(descStr)
+		
+		line := lipgloss.JoinHorizontal(lipgloss.Center, title, " ", desc)
+		fmt.Fprint(w, lipgloss.NewStyle().PaddingLeft(1).Render(line))
 	}
 }
 
@@ -106,7 +111,6 @@ func New(items []list.Item, cfg config.Config) Model {
 		MarginRight(1)
 
 	selectionStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color("235")). // Very dark grey
 		Border(lipgloss.NormalBorder(), false, false, false, true).
 		BorderForeground(primary).
 		PaddingLeft(1)
