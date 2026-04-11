@@ -8,7 +8,7 @@ project_name: shortcuts-tui
 builds:
   - id: shortcuts-tui
     # Main file to build
-    main: ./cmd/shortcuts-tui
+    main: ./cmd/shortcuts-tui/main.go
     # Binary name
     binary: shortcuts-tui
     # Target OS and architectures
