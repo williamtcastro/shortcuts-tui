@@ -38,6 +38,8 @@ type Styles struct {
 	DocHeader    lipgloss.Style
 	SearchPrompt lipgloss.Style
 	SearchCursor lipgloss.Style
+	KeyStyle     lipgloss.Style
+	StatusStyle  lipgloss.Style
 }
 
 func DefaultStyles(cfg config.Config) Styles {
@@ -56,7 +58,6 @@ func DefaultStyles(cfg config.Config) Styles {
 			Padding(0, 1).
 			Bold(true),
 		Footer: lipgloss.NewStyle().
-			Foreground(secondary).
 			MarginTop(1),
 		ActiveTab: lipgloss.NewStyle().
 			Foreground(primary).
@@ -86,6 +87,8 @@ func DefaultStyles(cfg config.Config) Styles {
 			MarginBottom(1),
 		SearchPrompt: lipgloss.NewStyle().Foreground(flamingo).Bold(true),
 		SearchCursor: lipgloss.NewStyle().Foreground(text).Background(flamingo),
+		KeyStyle:     lipgloss.NewStyle().Foreground(flamingo).Bold(true),
+		StatusStyle:  lipgloss.NewStyle().Foreground(secondary).MarginLeft(1),
 	}
 }
 
@@ -148,7 +151,6 @@ func New(items []list.Item, cfg config.Config) Model {
 	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
 	
-	// Apply search styles
 	l.Styles.FilterPrompt = s.SearchPrompt
 	l.Styles.FilterCursor = s.SearchCursor
 
@@ -192,7 +194,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		h, v := m.styles.App.GetFrameSize()
-		// Overhead: v (2 padding) + tabs (1) + separator (1) + help (1) + 2 (JoinVertical newlines)
 		listHeight := msg.Height - v - 5
 		if listHeight < 0 { listHeight = 0 }
 		
@@ -201,7 +202,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ready = true
 
 	case tea.KeyMsg:
-		// Global Tab Switching (Wrap around)
 		if !m.list.SettingFilter() && len(m.config.Views) > 0 {
 			switch msg.String() {
 			case "tab", "l", "right":
@@ -236,7 +236,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// Infinite wrap-around for list items
 		if !m.list.SettingFilter() && len(m.list.Items()) > 0 {
 			switch msg.String() {
 			case "j", "down":
@@ -293,12 +292,17 @@ func (m Model) View() string {
 		i := m.list.SelectedItem().(Item)
 		header := m.styles.DocHeader.Render("󰧮 " + i.Title())
 		view := m.styles.DocViewport.Render(m.viewport.View())
-		helpText := m.styles.Dim.Render(fmt.Sprintf(" %3.f%% • q/esc: back • j/k: scroll", m.viewport.ScrollPercent()*100))
-		footer := m.styles.Footer.Render(helpText)
-		return m.styles.App.Render(lipgloss.JoinVertical(lipgloss.Left, header, view, footer))
+		
+		scroll := fmt.Sprintf(" %3.f%% ", m.viewport.ScrollPercent()*100)
+		footer := lipgloss.JoinHorizontal(lipgloss.Center,
+			m.styles.KeyStyle.Render(" esc "), m.styles.Dim.Render("back • "),
+			m.styles.KeyStyle.Render(" j/k "), m.styles.Dim.Render("scroll • "),
+			m.styles.StatusStyle.Render(scroll),
+		)
+		
+		return m.styles.App.Render(lipgloss.JoinVertical(lipgloss.Left, header, view, m.styles.Footer.Render(footer)))
 	}
 
-	// 1. Render Tab Bar
 	var tabs []string
 	for i, v := range m.config.Views {
 		label := strings.ToUpper(v.Name)
@@ -310,19 +314,26 @@ func (m Model) View() string {
 	}
 	tabRow := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 	
-	// 2. Full-width separator line (bulletproof approach)
 	h, _ := m.styles.App.GetFrameSize()
 	fullWidth := m.width - h
 	if fullWidth < 0 { fullWidth = 0 }
-	
-	// Create a simple solid line for the separator
 	tabSeparator := m.styles.Dim.Render(strings.Repeat("─", fullWidth))
 
-	// 3. Help Footer
-	help := m.styles.Footer.Render("enter: run/view • x: exec • tab: switch • /: filter • q: quit")
+	keys := []string{
+		m.styles.KeyStyle.Render(" enter "), m.styles.Dim.Render("run • "),
+		m.styles.KeyStyle.Render(" x "), m.styles.Dim.Render("exec • "),
+		m.styles.KeyStyle.Render(" tab "), m.styles.Dim.Render("switch • "),
+		m.styles.KeyStyle.Render(" / "), m.styles.Dim.Render("filter"),
+	}
+	helpBar := lipgloss.JoinHorizontal(lipgloss.Center, keys...)
+
+	pagination := fmt.Sprintf(" %d/%d ", m.list.Paginator.Page+1, m.list.Paginator.TotalPages)
+	status := m.styles.StatusStyle.Render(pagination)
 	
-	// 4. Final Assembly (JoinVertical adds 1 newline between each element)
-	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, tabSeparator, m.list.View(), help)
+	// Create the full width footer with help on left and pagination on right
+	footerContent := lipgloss.JoinHorizontal(lipgloss.Top, helpBar, lipgloss.NewStyle().Width(fullWidth-lipgloss.Width(helpBar)).Align(lipgloss.Right).Render(status))
+
+	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, tabSeparator, m.list.View(), m.styles.Footer.Render(footerContent))
 	
 	return m.styles.App.Render(content)
 }
