@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -37,6 +38,41 @@ type Model struct {
 	inactiveTabStyle lipgloss.Style
 }
 
+type itemDelegate struct {
+	activeColor   lipgloss.Color
+	inactiveColor lipgloss.Color
+}
+
+func (d itemDelegate) Height() int                               { return 1 }
+func (d itemDelegate) Spacing() int                              { return 0 }
+func (d itemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
+func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(Item)
+	if !ok {
+		return
+	}
+
+	str := i.Title()
+	desc := i.Description()
+
+	style := lipgloss.NewStyle().PaddingLeft(2)
+	if index == m.Index() {
+		style = style.Bold(true).Foreground(d.activeColor).Background(lipgloss.Color("236"))
+		str = "> " + str
+	} else {
+		str = "  " + str
+	}
+
+	// Calculate space for description
+	titleWidth := 20
+	if len(str) > titleWidth {
+		titleWidth = len(str) + 2
+	}
+
+	line := fmt.Sprintf("%-*s %s", titleWidth, str, lipgloss.NewStyle().Foreground(d.inactiveColor).Render(desc))
+	fmt.Fprint(w, style.Render(line))
+}
+
 func New(items []list.Item, cfg config.Config) Model {
 	primary := lipgloss.Color(cfg.Theme.PrimaryColor)
 	secondary := lipgloss.Color(cfg.Theme.SecondaryColor)
@@ -63,7 +99,12 @@ func New(items []list.Item, cfg config.Config) Model {
 		Padding(0, 2).
 		MarginRight(1)
 
-	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
+	delegate := itemDelegate{
+		activeColor:   primary,
+		inactiveColor: secondary,
+	}
+
+	l := list.New([]list.Item{}, delegate, 0, 0)
 	l.Title = "Shortcuts Explorer"
 	l.Styles.Title = titleStyle
 

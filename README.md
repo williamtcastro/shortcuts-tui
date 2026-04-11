@@ -14,6 +14,7 @@ A high-performance Terminal User Interface (TUI) for exploring, searching, and e
 - **⌨️ Vim Keybindings:** Full support for Vim motions for navigation.
 - **📂 Multi-Tab Interface:** Separate views for Aliases/Functions and Documentation Guides.
 - **🔄 Infinite Navigation:** Tabs and lists wrap around seamlessly when you reach the end.
+- **📱 Compact UI:** High-density listing with title and description on a single line.
 
 ## How to Use
 
