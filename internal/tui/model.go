@@ -17,9 +17,8 @@ import (
 
 // --- Layout Constants ---
 const (
-	tabHeight      = 2 // Text + Border
-	footerHeight   = 1
-	verticalMargin = 2 // Padding around the app
+	tabHeight    = 2 // Name + Border
+	footerHeight = 1
 )
 
 // --- Styles ---
@@ -34,6 +33,8 @@ type Styles struct {
 	Title        lipgloss.Style
 	Desc         lipgloss.Style
 	Dim          lipgloss.Style
+	DocViewport  lipgloss.Style
+	DocHeader    lipgloss.Style
 }
 
 func DefaultStyles(cfg config.Config) Styles {
@@ -59,9 +60,8 @@ func DefaultStyles(cfg config.Config) Styles {
 			Bold(true),
 		InactiveTab: lipgloss.NewStyle().
 			Foreground(secondary).
-			Border(lipgloss.NormalBorder(), false, false, true, false).
-			BorderForeground(lipgloss.Color("0")). // Bottom border matches background
-			Padding(0, 2),
+			Padding(0, 2).
+			MarginBottom(1), // Match height of ActiveTab's border
 		TabBorder: lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder(), false, false, true, false).
 			BorderForeground(lipgloss.Color("238")),
@@ -72,6 +72,14 @@ func DefaultStyles(cfg config.Config) Styles {
 		Title: lipgloss.NewStyle().Width(25).Bold(true),
 		Desc:  lipgloss.NewStyle().Foreground(secondary),
 		Dim:   lipgloss.NewStyle().Foreground(secondary).Faint(true),
+		DocViewport: lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(secondary).
+			Padding(0, 1),
+		DocHeader: lipgloss.NewStyle().
+			Foreground(primary).
+			Bold(true).
+			MarginBottom(1),
 	}
 }
 
@@ -90,18 +98,18 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
-	title := i.Title()
-	desc := i.Description()
+	titleStr := i.Title()
+	descStr := i.Description()
 
 	if index == m.Index() {
-		t := d.styles.Title.Foreground(d.active).Render("󰄾 " + title)
-		dsc := d.styles.Desc.Render(desc)
-		line := lipgloss.JoinHorizontal(lipgloss.Center, t, " ", dsc)
+		t := d.styles.Title.Foreground(d.active).Render("󰄾 " + titleStr)
+		dsc := d.styles.Desc.Render(descStr)
+		line := lipgloss.JoinHorizontal(lipgloss.Top, t, " ", dsc)
 		fmt.Fprint(w, d.styles.SelectionBar.Render(line))
 	} else {
-		t := d.styles.Title.PaddingLeft(2).Render(title)
-		dsc := d.styles.Dim.Render(desc)
-		line := lipgloss.JoinHorizontal(lipgloss.Center, t, " ", dsc)
+		t := d.styles.Title.PaddingLeft(2).Render(titleStr)
+		dsc := d.styles.Dim.Render(descStr)
+		line := lipgloss.JoinHorizontal(lipgloss.Top, t, " ", dsc)
 		fmt.Fprint(w, lipgloss.NewStyle().PaddingLeft(1).Render(line))
 	}
 }
@@ -177,18 +185,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
-		// Calculate available space
 		h, v := m.styles.App.GetFrameSize()
-		// height - padding - tabs - footer - spacing
-		listHeight := msg.Height - v - tabHeight - footerHeight - 2
+		// List height calculation
+		m.list.SetSize(msg.Width-h, msg.Height-v-tabHeight-footerHeight-1)
 		
-		m.list.SetSize(msg.Width-h, listHeight)
-		m.viewport = viewport.New(msg.Width-h, msg.Height-v-4)
-		m.viewport.YPosition = 4
+		// Viewport height (includes its own border)
+		m.viewport = viewport.New(msg.Width-h-4, msg.Height-v-8)
 		m.ready = true
 
 	case tea.KeyMsg:
-		// Global Navigation
 		if !m.list.SettingFilter() && len(m.config.Views) > 0 {
 			switch msg.String() {
 			case "tab", "l", "right":
@@ -208,7 +213,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Viewport Mode
 		if m.showViewport {
 			switch msg.String() {
 			case "esc", "q":
@@ -228,7 +232,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// List Mode
 		switch msg.String() {
 		case "ctrl+c", "q":
 			if !m.list.SettingFilter() {
@@ -272,13 +275,16 @@ func (m Model) View() string {
 
 	if m.showViewport {
 		i := m.list.SelectedItem().(Item)
-		header := m.styles.Header.Render(" " + i.Title() + " ")
-		help := m.styles.Dim.Render(" %3.f%% • q/esc: back • j/k: scroll")
-		footer := fmt.Sprintf(help, m.viewport.ScrollPercent()*100)
-		return m.styles.App.Render(lipgloss.JoinVertical(lipgloss.Left, header, "\n", m.viewport.View(), "\n", footer))
+		header := m.styles.DocHeader.Render("󰧮 " + i.Title())
+		view := m.styles.DocViewport.Render(m.viewport.View())
+		
+		helpText := m.styles.Dim.Render(fmt.Sprintf(" %3.f%% • q/esc: back • j/k: scroll", m.viewport.ScrollPercent()*100))
+		footer := m.styles.Footer.Render(helpText)
+		
+		return m.styles.App.Render(lipgloss.JoinVertical(lipgloss.Left, header, view, footer))
 	}
 
-	// 1. Render Tab Bar
+	// 1. Tab Bar
 	var tabs []string
 	for i, v := range m.config.Views {
 		label := strings.ToUpper(v.Name)
@@ -290,18 +296,15 @@ func (m Model) View() string {
 	}
 	tabRow := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 	
-	// Add a full-width bottom border to the tab bar for a professional look
 	width, _ := m.styles.App.GetFrameSize()
 	fullWidth := m.width - width
-	
-	// Pad the tab row to fill width and add border
 	tabBar := m.styles.TabBorder.Width(fullWidth).Render(tabRow)
 
-	// 2. Help/Footer
+	// 2. Help Footer
 	help := m.styles.Footer.Render("enter: run/view • x: exec • tab: switch • /: filter • q: quit")
 	
 	// 3. Assemble
-	content := lipgloss.JoinVertical(lipgloss.Left, tabBar, "\n", m.list.View(), help)
+	content := lipgloss.JoinVertical(lipgloss.Left, tabBar, m.list.View(), help)
 	
 	return m.styles.App.Render(content)
 }
