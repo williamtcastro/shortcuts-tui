@@ -6,6 +6,11 @@
 
 ---
 
+> [!IMPORTANT]
+> **AI-Assisted Development:** This project, including its codebase, tests, and documentation, was developed with the assistance of **Gemini CLI**. While thoroughly reviewed and tested, users should always verify sensitive command aliases before execution.
+
+---
+
 ## ⚡️ Quick Start
 
 1. **Install via Homebrew:**
