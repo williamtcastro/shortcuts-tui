@@ -188,22 +188,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ready = true
 
 	case tea.KeyMsg:
+		// Global Tab Switching (Wrap around)
 		if !m.list.SettingFilter() && len(m.config.Views) > 0 {
 			switch msg.String() {
 			case "tab", "l", "right":
-				if m.activeTabIndex < len(m.config.Views)-1 {
-					m.activeTabIndex++
-					m.updateListForTab()
-					m.showViewport = false
-					return m, nil
-				}
+				m.activeTabIndex = (m.activeTabIndex + 1) % len(m.config.Views)
+				m.updateListForTab()
+				m.showViewport = false
+				return m, nil
 			case "shift+tab", "h", "left":
-				if m.activeTabIndex > 0 {
-					m.activeTabIndex--
-					m.updateListForTab()
-					m.showViewport = false
-					return m, nil
-				}
+				m.activeTabIndex = (m.activeTabIndex - 1 + len(m.config.Views)) % len(m.config.Views)
+				m.updateListForTab()
+				m.showViewport = false
+				return m, nil
 			}
 		}
 
@@ -224,6 +221,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
 			return m, cmd
+		}
+
+		// Infinite wrap-around for list items
+		if !m.list.SettingFilter() && len(m.list.Items()) > 0 {
+			switch msg.String() {
+			case "j", "down":
+				if m.list.Index() == len(m.list.Items())-1 {
+					m.list.Select(0)
+					return m, nil
+				}
+			case "k", "up":
+				if m.list.Index() == 0 {
+					m.list.Select(len(m.list.Items()) - 1)
+					return m, nil
+				}
+			}
 		}
 
 		switch msg.String() {
