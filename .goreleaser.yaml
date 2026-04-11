@@ -1,0 +1,82 @@
+# This is a GoReleaser configuration file.
+# See https://goreleaser.com for full documentation.
+
+# The name of the project
+project_name: shortcuts-tui
+
+# Build configuration
+builds:
+  - id: shortcuts-tui
+    # Main file to build
+    main: ./cmd/shortcuts-tui
+    # Binary name
+    binary: shortcuts-tui
+    # Target OS and architectures
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    # Optional: Build flags
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+# Archive configuration
+archives:
+  - format: tar.gz
+    # Name of the archive
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Files to include in the archive besides the binary
+    files:
+      - README.md
+      - LICENSE
+      - config.yaml.example
+
+# Homebrew configuration
+brews:
+  - name: shortcuts-tui
+    # Repository to push the formula to
+    repository:
+      owner: williamtcastro
+      name: homebrew-tap
+      # The token must have repo scope
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    
+    # Directory in the tap repository to store the formula
+    directory: Formula
+    # Homepage of the project
+    homepage: "https://github.com/williamtcastro/shortcuts-tui"
+    # Description of the project
+    description: "A TUI for managing shortcuts"
+    # License of the project
+    license: "MIT"
+
+    # Test block for the formula
+    test: |
+      system "#{bin}/shortcuts-tui --help"
+
+    # Install block for the formula
+    install: |
+      bin.install "shortcuts-tui"
+
+# Release configuration
+release:
+  # GitHub release settings
+  github:
+    owner: williamtcastro
+    name: shortcuts-tui
+  # Use the standard tag as the release name
+  name_template: "{{.Tag}}"
+
+# Snapshot configuration (for testing)
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+# Changelog configuration
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
