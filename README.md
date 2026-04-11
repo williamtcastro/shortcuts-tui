@@ -8,13 +8,14 @@ A high-performance Terminal User Interface (TUI) for exploring, searching, and e
 
 ## Features
 
-- **🔍 Live Search:** Press `/` to search through all aliases, commands, and descriptions.
+- **🔍 Deep Search:** Press `/` to search through titles, descriptions, **full commands**, and document content.
 - **⚡️ Direct Execution:** Press **Enter** on any alias to execute it immediately in your shell.
 - **📖 Markdown Support:** Renders documentation guides with beautiful formatting.
 - **⌨️ Vim Keybindings:** Full support for Vim motions for navigation.
-- **📂 Multi-Tab Interface:** Separate views for Aliases/Functions and Documentation Guides.
+- **📂 Multi-Tab Interface:** Separate views for Aliases/Functions and Documentation Guides via `config.yaml`.
 - **🔄 Infinite Navigation:** Tabs and lists wrap around seamlessly when you reach the end.
 - **📱 Compact UI:** High-density listing with title and description on a single line.
+- **🎨 Catppuccin Mocha:** Beautiful, high-contrast theme out of the box.
 
 ## How to Use
 
@@ -26,7 +27,7 @@ alias gs="git status" # Show current git status
 ```
 
 ### 2. Configuration (`config.yaml`)
-By default, the TUI looks for a config file at `~/.config/shortcuts/config.yaml`. This allows you to customize your views (tabs), script paths, and UI colors.
+By default, the TUI looks for a config file at `~/.config/shortcuts/config.yaml`.
 
 **Example `config.yaml`:**
 ```yaml
@@ -40,20 +41,13 @@ views:
     type: "doc"
     dirs:
       - "/Users/youruser/dotfiles/docs"
-      - "./docs"
-  - name: "Work"
-    type: "alias"
-    dirs:
-      - "/Users/youruser/work/scripts"
 
-# Customize your TUI colors!
+# Customize your TUI colors (Catppuccin Mocha defaults shown)
 theme:
-  primary: "#25A065"
-  secondary: "#545454"
-  text: "#FFFDF5"
+  primary: "#a6e3a1"   # Green (Tabs/Headers)
+  secondary: "#6c7086" # Overlay0 (Dimmed text)
+  text: "#cdd6f4"      # Text (Default text)
 ```
-
-You can still use environment variables (`SHORTCUTS_SCRIPTS_DIRS`, etc.) if preferred.
 
 ### 3. Launch the TUI
 Simply run `shortcuts-tui` from your terminal.
@@ -68,6 +62,7 @@ Simply run `shortcuts-tui` from your terminal.
 | `Shift+Tab` / `h` | Switch to previous tab |
 | `/` | Start searching/filtering |
 | `Enter` | **Run Alias** or **View Document** |
+| `x` | Execute alias (if not in search mode) |
 | `q` / `Ctrl+C` | Quit |
 
 ### Viewport (Document Viewer)
