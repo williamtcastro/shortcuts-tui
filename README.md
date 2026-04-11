@@ -62,7 +62,7 @@ Simply run `shortcuts-tui` from your terminal.
 ```bash
 git clone https://github.com/williamtcastro/shortcuts-tui.git
 cd shortcuts-tui
-go build -o shortcuts-tui main.go
+go build -o shortcuts-tui ./cmd/shortcuts-tui
 mv shortcuts-tui ~/.local/bin/
 ```
 
