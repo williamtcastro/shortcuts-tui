@@ -15,6 +15,8 @@ import (
 	"github.com/williamtcastro/shortcuts-tui/internal/config"
 )
 
+type Tab int
+
 var (
 	appStyle = lipgloss.NewStyle().Padding(1, 2)
 )
@@ -27,20 +29,24 @@ type Model struct {
 	height       int
 	renderer     *glamour.TermRenderer
 	showViewport bool
-	titleStyle   lipgloss.Style
-	infoStyle    func(strings ...string) string
 	
 	activeTabIndex int
 	config         config.Config
 	allItem        []list.Item
 	
+	// Styles
+	titleStyle       lipgloss.Style
+	infoStyle        lipgloss.Style
 	activeTabStyle   lipgloss.Style
 	inactiveTabStyle lipgloss.Style
+	helpStyle        lipgloss.Style
+	selectionStyle   lipgloss.Style
 }
 
 type itemDelegate struct {
-	activeColor   lipgloss.Color
-	inactiveColor lipgloss.Color
+	activeColor    lipgloss.Color
+	inactiveColor  lipgloss.Color
+	selectionStyle lipgloss.Style
 }
 
 func (d itemDelegate) Height() int                               { return 1 }
@@ -52,25 +58,24 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
-	str := i.Title()
+	title := i.Title()
 	desc := i.Description()
 
-	style := lipgloss.NewStyle().PaddingLeft(2)
 	if index == m.Index() {
-		style = style.Bold(true).Foreground(d.activeColor).Background(lipgloss.Color("236"))
-		str = "> " + str
+		// Active item styling
+		title = lipgloss.NewStyle().Foreground(d.activeColor).Bold(true).Render("󰄾 " + title)
+		desc = lipgloss.NewStyle().Foreground(d.inactiveColor).Render(desc)
+		
+		// Render the whole line with a subtle background
+		line := fmt.Sprintf("%-25s %s", title, desc)
+		fmt.Fprint(w, d.selectionStyle.Render(line))
 	} else {
-		str = "  " + str
+		// Inactive item styling
+		title = "  " + title
+		desc = lipgloss.NewStyle().Foreground(d.inactiveColor).Faint(true).Render(desc)
+		line := fmt.Sprintf("%-25s %s", title, desc)
+		fmt.Fprint(w, lipgloss.NewStyle().PaddingLeft(2).Render(line))
 	}
-
-	// Calculate space for description
-	titleWidth := 20
-	if len(str) > titleWidth {
-		titleWidth = len(str) + 2
-	}
-
-	line := fmt.Sprintf("%-*s %s", titleWidth, str, lipgloss.NewStyle().Foreground(d.inactiveColor).Render(desc))
-	fmt.Fprint(w, style.Render(line))
 }
 
 func New(items []list.Item, cfg config.Config) Model {
@@ -81,32 +86,46 @@ func New(items []list.Item, cfg config.Config) Model {
 	titleStyle := lipgloss.NewStyle().
 		Foreground(text).
 		Background(primary).
-		Padding(0, 1)
+		Padding(0, 1).
+		Bold(true)
 
 	infoStyle := lipgloss.NewStyle().
-		Foreground(secondary).
-		Render
+		Foreground(secondary)
 
 	activeTabStyle := lipgloss.NewStyle().
-		Foreground(text).
-		Background(primary).
+		Foreground(primary).
+		Border(lipgloss.NormalBorder(), false, false, true, false).
+		BorderForeground(primary).
 		Padding(0, 2).
 		MarginRight(1).
 		Bold(true)
 
 	inactiveTabStyle := lipgloss.NewStyle().
-		Foreground(primary).
+		Foreground(secondary).
 		Padding(0, 2).
 		MarginRight(1)
 
+	selectionStyle := lipgloss.NewStyle().
+		Background(lipgloss.Color("235")). // Very dark grey
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(primary).
+		PaddingLeft(1)
+
+	helpStyle := lipgloss.NewStyle().
+		Foreground(secondary).
+		Faint(true)
+
 	delegate := itemDelegate{
-		activeColor:   primary,
-		inactiveColor: secondary,
+		activeColor:    primary,
+		inactiveColor:  secondary,
+		selectionStyle: selectionStyle,
 	}
 
 	l := list.New([]list.Item{}, delegate, 0, 0)
-	l.Title = "Shortcuts Explorer"
+	l.Title = "SHORTCUTS"
 	l.Styles.Title = titleStyle
+	l.SetShowHelp(false) // We render our own help
+	l.SetShowStatusBar(false)
 
 	renderer, _ := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
@@ -118,11 +137,13 @@ func New(items []list.Item, cfg config.Config) Model {
 		renderer:         renderer,
 		titleStyle:       titleStyle,
 		infoStyle:        infoStyle,
+		activeTabStyle:   activeTabStyle,
+		inactiveTabStyle: inactiveTabStyle,
+		helpStyle:        helpStyle,
+		selectionStyle:   selectionStyle,
 		activeTabIndex:   0,
 		allItem:          items,
 		config:           cfg,
-		activeTabStyle:   activeTabStyle,
-		inactiveTabStyle: inactiveTabStyle,
 	}
 	
 	m.updateListForTab()
@@ -146,7 +167,6 @@ func (m *Model) updateListForTab() {
 	}
 	m.list.SetItems(filtered)
 	m.list.ResetSelected()
-	m.list.Title = activeView.Name
 }
 
 func (m Model) Init() tea.Cmd {
@@ -162,7 +182,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		h, v := appStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v-3) // Space for tabs
+		m.list.SetSize(msg.Width-h, msg.Height-v-6) // Space for tabs and help
 
 		m.viewport = viewport.New(msg.Width-h, msg.Height-v-4)
 		m.viewport.YPosition = 4
@@ -172,70 +192,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
-		// Handle Tab switching globally (if not filtering)
-		if !m.list.SettingFilter() && len(m.config.Views) > 0 {
-			switch msg.String() {
-			case "tab", "l", "right":
-				m.showViewport = false // Close viewport if open
-				m.activeTabIndex = (m.activeTabIndex + 1) % len(m.config.Views)
-				m.updateListForTab()
-				return m, nil
-			case "shift+tab", "h", "left":
-				m.showViewport = false // Close viewport if open
-				m.activeTabIndex = (m.activeTabIndex - 1 + len(m.config.Views)) % len(m.config.Views)
-				m.updateListForTab()
-				return m, nil
-			}
-		}
-
 		if m.showViewport {
 			switch msg.String() {
 			case "esc", "q":
 				m.showViewport = false
 				return m, nil
-			case "j":
-				m.viewport.LineDown(1)
-				return m, nil
-			case "k":
-				m.viewport.LineUp(1)
-				return m, nil
-			case "d":
-				m.viewport.HalfPageDown()
-				return m, nil
-			case "u":
-				m.viewport.HalfPageUp()
-				return m, nil
-			case "f":
-				m.viewport.PageDown()
-				return m, nil
-			case "b":
-				m.viewport.PageUp()
-				return m, nil
-			case "g":
-				m.viewport.GotoTop()
-				return m, nil
-			case "G":
-				m.viewport.GotoBottom()
-				return m, nil
+			case "j": m.viewport.LineDown(1); return m, nil
+			case "k": m.viewport.LineUp(1); return m, nil
+			case "d": m.viewport.HalfPageDown(); return m, nil
+			case "u": m.viewport.HalfPageUp(); return m, nil
+			case "f": m.viewport.PageDown(); return m, nil
+			case "b": m.viewport.PageUp(); return m, nil
+			case "g": m.viewport.GotoTop(); return m, nil
+			case "G": m.viewport.GotoBottom(); return m, nil
 			}
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
 			return m, cmd
 		}
 
-		// Handle infinite list scrolling (wrap around)
-		if !m.list.SettingFilter() && len(m.list.Items()) > 0 {
+		if !m.list.SettingFilter() && len(m.config.Views) > 0 {
 			switch msg.String() {
-			case "j", "down":
-				if m.list.Index() == len(m.list.Items())-1 {
-					m.list.Select(0)
-					return m, nil
-				}
-			case "k", "up":
-				if m.list.Index() == 0 {
-					m.list.Select(len(m.list.Items()) - 1)
-					return m, nil
-				}
+			case "tab", "l", "right":
+				m.activeTabIndex = (m.activeTabIndex + 1) % len(m.config.Views)
+				m.updateListForTab()
+				return m, nil
+			case "shift+tab", "h", "left":
+				m.activeTabIndex = (m.activeTabIndex - 1 + len(m.config.Views)) % len(m.config.Views)
+				m.updateListForTab()
+				return m, nil
 			}
 		}
 
@@ -288,9 +273,9 @@ func (m Model) View() string {
 
 	if m.showViewport {
 		i := m.list.SelectedItem().(Item)
-		header := m.titleStyle.Render(i.Title())
-		footer := m.infoStyle(fmt.Sprintf("%3.f%% (q/esc to back, j/k to scroll)", m.viewport.ScrollPercent()*100))
-		return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, header, m.viewport.View(), footer))
+		header := m.titleStyle.Render(" " + i.Title() + " ")
+		footer := m.infoStyle.Render(fmt.Sprintf(" %3.f%% • q/esc: back • j/k: scroll", m.viewport.ScrollPercent()*100))
+		return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, header, "\n", m.viewport.View(), "\n", footer))
 	}
 
 	// Render Dynamic Tabs
@@ -303,8 +288,10 @@ func (m Model) View() string {
 			tabs = append(tabs, m.inactiveTabStyle.Render(label))
 		}
 	}
+	tabRow := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 	
-	row := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
+	// Help/Footer
+	help := m.helpStyle.Render("enter: run/view • x: execute • tab: switch tab • /: search • q: quit")
 	
-	return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, row, "\n", m.list.View()))
+	return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, tabRow, "\n", m.list.View(), "\n", help))
 }
