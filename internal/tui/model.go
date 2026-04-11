@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -11,13 +12,6 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/williamtcastro/shortcuts-tui/internal/config"
-)
-
-type Tab int
-
-const (
-	TabAliases Tab = iota
-	TabDocs
 )
 
 var (
@@ -35,8 +29,9 @@ type Model struct {
 	titleStyle   lipgloss.Style
 	infoStyle    func(strings ...string) string
 	
-	activeTab    Tab
-	allItem      []list.Item
+	activeTabIndex int
+	config         config.Config
+	allItem        []list.Item
 	
 	activeTabStyle   lipgloss.Style
 	inactiveTabStyle lipgloss.Style
@@ -82,8 +77,9 @@ func New(items []list.Item, cfg config.Config) Model {
 		renderer:         renderer,
 		titleStyle:       titleStyle,
 		infoStyle:        infoStyle,
-		activeTab:        TabAliases,
+		activeTabIndex:   0,
 		allItem:          items,
+		config:           cfg,
 		activeTabStyle:   activeTabStyle,
 		inactiveTabStyle: inactiveTabStyle,
 	}
@@ -93,29 +89,23 @@ func New(items []list.Item, cfg config.Config) Model {
 }
 
 func (m *Model) updateListForTab() {
+	if len(m.config.Views) == 0 {
+		return
+	}
+	
+	activeView := m.config.Views[m.activeTabIndex]
+	
 	var filtered []list.Item
 	for _, item := range m.allItem {
 		if i, ok := item.(Item); ok {
-			switch m.activeTab {
-			case TabAliases:
-				if i.IsAlias || i.Category == "Functions" {
-					filtered = append(filtered, item)
-				}
-			case TabDocs:
-				if !i.IsAlias && i.Category != "Functions" {
-					filtered = append(filtered, item)
-				}
+			if i.ViewName == activeView.Name {
+				filtered = append(filtered, item)
 			}
 		}
 	}
 	m.list.SetItems(filtered)
 	m.list.ResetSelected()
-	
-	if m.activeTab == TabAliases {
-		m.list.Title = "Aliases & Functions"
-	} else {
-		m.list.Title = "Documentation Guides"
-	}
+	m.list.Title = activeView.Name
 }
 
 func (m Model) Init() tea.Cmd {
@@ -131,7 +121,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		h, v := appStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v-3) // Leave space for tabs
+		m.list.SetSize(msg.Width-h, msg.Height-v-3) // Space for tabs
 
 		m.viewport = viewport.New(msg.Width-h, msg.Height-v-4)
 		m.viewport.YPosition = 4
@@ -146,44 +136,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "esc", "q":
 				m.showViewport = false
 				return m, nil
-			case "j":
-				m.viewport.LineDown(1)
-				return m, nil
-			case "k":
-				m.viewport.LineUp(1)
-				return m, nil
-			case "d":
-				m.viewport.HalfPageDown()
-				return m, nil
-			case "u":
-				m.viewport.HalfPageUp()
-				return m, nil
-			case "f":
-				m.viewport.PageDown()
-				return m, nil
-			case "b":
-				m.viewport.PageUp()
-				return m, nil
-			case "g":
-				m.viewport.GotoTop()
-				return m, nil
-			case "G":
-				m.viewport.GotoBottom()
-				return m, nil
+			case "j": m.viewport.LineDown(1); return m, nil
+			case "k": m.viewport.LineUp(1); return m, nil
+			case "d": m.viewport.HalfPageDown(); return m, nil
+			case "u": m.viewport.HalfPageUp(); return m, nil
+			case "f": m.viewport.PageDown(); return m, nil
+			case "b": m.viewport.PageUp(); return m, nil
+			case "g": m.viewport.GotoTop(); return m, nil
+			case "G": m.viewport.GotoBottom(); return m, nil
 			}
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
 			return m, cmd
 		}
 
-		if !m.list.SettingFilter() {
+		if !m.list.SettingFilter() && len(m.config.Views) > 0 {
 			switch msg.String() {
 			case "tab", "l", "right":
-				m.activeTab = (m.activeTab + 1) % 2
+				m.activeTabIndex = (m.activeTabIndex + 1) % len(m.config.Views)
 				m.updateListForTab()
 				return m, nil
 			case "shift+tab", "h", "left":
-				m.activeTab = (m.activeTab - 1 + 2) % 2
+				m.activeTabIndex = (m.activeTabIndex - 1 + len(m.config.Views)) % len(m.config.Views)
 				m.updateListForTab()
 				return m, nil
 			}
@@ -243,14 +217,14 @@ func (m Model) View() string {
 		return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, header, m.viewport.View(), footer))
 	}
 
-	// Render Tabs
+	// Render Dynamic Tabs
 	var tabs []string
-	titles := []string{"ALIASES", "DOCS"}
-	for i, t := range titles {
-		if Tab(i) == m.activeTab {
-			tabs = append(tabs, m.activeTabStyle.Render(t))
+	for i, v := range m.config.Views {
+		label := strings.ToUpper(v.Name)
+		if i == m.activeTabIndex {
+			tabs = append(tabs, m.activeTabStyle.Render(label))
 		} else {
-			tabs = append(tabs, m.inactiveTabStyle.Render(t))
+			tabs = append(tabs, m.inactiveTabStyle.Render(label))
 		}
 	}
 	

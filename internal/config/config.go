@@ -14,18 +14,35 @@ type Theme struct {
 	TextColor      string `mapstructure:"text"`
 }
 
+type ViewConfig struct {
+	Name string   `mapstructure:"name"`
+	Dirs []string `mapstructure:"dirs"`
+	Type string   `mapstructure:"type"` // "alias" or "doc"
+}
+
 type Config struct {
-	ScriptsDirs []string `mapstructure:"scripts_dirs"`
-	DocsDirs    []string `mapstructure:"docs_dirs"`
-	Theme       Theme    `mapstructure:"theme"`
+	Views []ViewConfig `mapstructure:"views"`
+	Theme Theme        `mapstructure:"theme"`
 }
 
 func LoadConfig() Config {
 	home, _ := os.UserHomeDir()
 	
-	// Set defaults
-	viper.SetDefault("scripts_dirs", []string{filepath.Join(home, "dotfiles", "scripts")})
-	viper.SetDefault("docs_dirs", []string{"./docs", filepath.Join(home, ".local", "share", "shortcuts-tui", "docs")})
+	// Set default views
+	defaultViews := []ViewConfig{
+		{
+			Name: "Aliases",
+			Type: "alias",
+			Dirs: []string{filepath.Join(home, "dotfiles", "scripts")},
+		},
+		{
+			Name: "Docs",
+			Type: "doc",
+			Dirs: []string{"./docs", filepath.Join(home, ".local", "share", "shortcuts-tui", "docs")},
+		},
+	}
+
+	viper.SetDefault("views", defaultViews)
 	viper.SetDefault("theme.primary", "#25A065")
 	viper.SetDefault("theme.secondary", "#545454")
 	viper.SetDefault("theme.text", "#FFFDF5")
@@ -36,14 +53,12 @@ func LoadConfig() Config {
 	viper.AddConfigPath(filepath.Join(home, ".config", "shortcuts"))
 	viper.AddConfigPath(".")
 
-	// Attempt to read config (ignore error if not found, rely on defaults)
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			fmt.Println("Error reading config file:", err)
 		}
 	}
 
-	// Environment variable overrides
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("SHORTCUTS")
 

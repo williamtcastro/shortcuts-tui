@@ -7,6 +7,7 @@ type Item struct {
 	ItemDesc    string
 	ItemContent string
 	Category    string
+	ViewName    string
 	IsAlias     bool
 	Command     string
 }

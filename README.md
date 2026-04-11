@@ -24,16 +24,25 @@ alias gs="git status" # Show current git status
 ```
 
 ### 2. Configuration (`config.yaml`)
-By default, the TUI looks for a config file at `~/.config/shortcuts/config.yaml`. This allows you to customize the script paths and UI colors. If no config exists, it falls back to sensible defaults.
+By default, the TUI looks for a config file at `~/.config/shortcuts/config.yaml`. This allows you to customize your views (tabs), script paths, and UI colors.
 
 **Example `config.yaml`:**
 ```yaml
-# Define where your ZSH scripts and markdown docs live
-scripts_dirs:
-  - "/Users/youruser/dotfiles/scripts"
-docs_dirs:
-  - "/Users/youruser/dotfiles/docs"
-  - "./docs"
+# Define your custom tabs/views
+views:
+  - name: "Aliases"
+    type: "alias"
+    dirs: 
+      - "/Users/youruser/dotfiles/scripts"
+  - name: "Docs"
+    type: "doc"
+    dirs:
+      - "/Users/youruser/dotfiles/docs"
+      - "./docs"
+  - name: "Work"
+    type: "alias"
+    dirs:
+      - "/Users/youruser/work/scripts"
 
 # Customize your TUI colors!
 theme:
