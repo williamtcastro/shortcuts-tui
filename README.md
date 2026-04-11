@@ -1,6 +1,9 @@
 # Shortcuts TUI 🚀
 
-A high-performance Terminal User Interface (TUI) for exploring, searching, and executing shell aliases and documentation guides. Built with Go and the Charm Bracelet [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework.
+![Shortcuts TUI Demo](docs/demo.png)
+
+A high-performance Terminal User Interface (TUI) for exploring, searching, and executing shell aliases and documentation guides.
+ Built with Go and the Charm Bracelet [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework.
 
 ---
 
