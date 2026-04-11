@@ -21,4 +21,7 @@ func (i Item) Description() string {
 	return i.ItemDesc
 }
 
-func (i Item) FilterValue() string { return i.ItemTitle + " " + i.ItemDesc + " " + i.Category }
+func (i Item) FilterValue() string { 
+	// Search by Title, Description, Category, AND the full command/content
+	return i.ItemTitle + " " + i.ItemDesc + " " + i.Category + " " + i.Command + " " + i.ItemContent
+}

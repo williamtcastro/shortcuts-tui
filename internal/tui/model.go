@@ -36,12 +36,19 @@ type Styles struct {
 	Dim          lipgloss.Style
 	DocViewport  lipgloss.Style
 	DocHeader    lipgloss.Style
+	SearchPrompt lipgloss.Style
+	SearchCursor lipgloss.Style
 }
 
 func DefaultStyles(cfg config.Config) Styles {
 	primary := lipgloss.Color(cfg.Theme.PrimaryColor)
 	secondary := lipgloss.Color(cfg.Theme.SecondaryColor)
 	text := lipgloss.Color(cfg.Theme.TextColor)
+	
+	// Specialized high-clarity colors
+	accent := lipgloss.Color("#f9e2af") // Yellow (Mocha)
+	mauve := lipgloss.Color("#cba6f7")  // Mauve (Mocha)
+	flamingo := lipgloss.Color("#f2cdcd") // Flamingo (Mocha)
 
 	return Styles{
 		App: lipgloss.NewStyle().Padding(1, 2),
@@ -55,7 +62,7 @@ func DefaultStyles(cfg config.Config) Styles {
 			MarginTop(1),
 		ActiveTab: lipgloss.NewStyle().
 			Foreground(primary).
-			Background(lipgloss.Color("236")). // Subtle block highlight
+			Background(lipgloss.Color("236")).
 			Padding(0, 2).
 			Bold(true),
 		InactiveTab: lipgloss.NewStyle().
@@ -63,13 +70,13 @@ func DefaultStyles(cfg config.Config) Styles {
 			Padding(0, 2),
 		TabSeparator: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("238")).
-			Border(lipgloss.NormalBorder(), false, false, true, false), // Single clean line
+			Border(lipgloss.NormalBorder(), false, false, true, false),
 		SelectionBar: lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder(), false, false, false, true).
-			BorderForeground(primary).
+			BorderForeground(accent).
 			PaddingLeft(1),
 		Title: lipgloss.NewStyle().Width(25).Bold(true),
-		Desc:  lipgloss.NewStyle().Foreground(secondary),
+		Desc:  lipgloss.NewStyle().Foreground(mauve),
 		Dim:   lipgloss.NewStyle().Foreground(secondary).Faint(true),
 		DocViewport: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -79,6 +86,8 @@ func DefaultStyles(cfg config.Config) Styles {
 			Foreground(primary).
 			Bold(true).
 			MarginBottom(1),
+		SearchPrompt: lipgloss.NewStyle().Foreground(flamingo).Bold(true),
+		SearchCursor: lipgloss.NewStyle().Foreground(text).Background(flamingo),
 	}
 }
 
@@ -86,6 +95,7 @@ func DefaultStyles(cfg config.Config) Styles {
 type itemDelegate struct {
 	styles Styles
 	active lipgloss.Color
+	accent lipgloss.Color
 }
 
 func (d itemDelegate) Height() int                               { return 1 }
@@ -99,7 +109,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	descStr := i.Description()
 
 	if index == m.Index() {
-		t := d.styles.Title.Foreground(d.active).Render("󰄾 " + titleStr)
+		t := d.styles.Title.Foreground(d.accent).Render("󰄾 " + titleStr)
 		dsc := d.styles.Desc.Render(descStr)
 		line := lipgloss.JoinHorizontal(lipgloss.Top, t, " ", dsc)
 		fmt.Fprint(w, d.styles.SelectionBar.Render(line))
@@ -132,12 +142,17 @@ func New(items []list.Item, cfg config.Config) Model {
 	delegate := itemDelegate{
 		styles: s,
 		active: lipgloss.Color(cfg.Theme.PrimaryColor),
+		accent: lipgloss.Color("#f9e2af"), // Yellow
 	}
 
 	l := list.New([]list.Item{}, delegate, 0, 0)
 	l.SetShowTitle(false)
 	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
+	
+	// Apply search styles
+	l.Styles.FilterPrompt = s.SearchPrompt
+	l.Styles.FilterCursor = s.SearchCursor
 
 	renderer, _ := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
