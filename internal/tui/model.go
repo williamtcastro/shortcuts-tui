@@ -131,35 +131,70 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
+		// Handle Tab switching globally (if not filtering)
+		if !m.list.SettingFilter() && len(m.config.Views) > 0 {
+			switch msg.String() {
+			case "tab", "l", "right":
+				m.showViewport = false // Close viewport if open
+				m.activeTabIndex = (m.activeTabIndex + 1) % len(m.config.Views)
+				m.updateListForTab()
+				return m, nil
+			case "shift+tab", "h", "left":
+				m.showViewport = false // Close viewport if open
+				m.activeTabIndex = (m.activeTabIndex - 1 + len(m.config.Views)) % len(m.config.Views)
+				m.updateListForTab()
+				return m, nil
+			}
+		}
+
 		if m.showViewport {
 			switch msg.String() {
 			case "esc", "q":
 				m.showViewport = false
 				return m, nil
-			case "j": m.viewport.LineDown(1); return m, nil
-			case "k": m.viewport.LineUp(1); return m, nil
-			case "d": m.viewport.HalfPageDown(); return m, nil
-			case "u": m.viewport.HalfPageUp(); return m, nil
-			case "f": m.viewport.PageDown(); return m, nil
-			case "b": m.viewport.PageUp(); return m, nil
-			case "g": m.viewport.GotoTop(); return m, nil
-			case "G": m.viewport.GotoBottom(); return m, nil
+			case "j":
+				m.viewport.LineDown(1)
+				return m, nil
+			case "k":
+				m.viewport.LineUp(1)
+				return m, nil
+			case "d":
+				m.viewport.HalfPageDown()
+				return m, nil
+			case "u":
+				m.viewport.HalfPageUp()
+				return m, nil
+			case "f":
+				m.viewport.PageDown()
+				return m, nil
+			case "b":
+				m.viewport.PageUp()
+				return m, nil
+			case "g":
+				m.viewport.GotoTop()
+				return m, nil
+			case "G":
+				m.viewport.GotoBottom()
+				return m, nil
 			}
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
 			return m, cmd
 		}
 
-		if !m.list.SettingFilter() && len(m.config.Views) > 0 {
+		// Handle infinite list scrolling (wrap around)
+		if !m.list.SettingFilter() && len(m.list.Items()) > 0 {
 			switch msg.String() {
-			case "tab", "l", "right":
-				m.activeTabIndex = (m.activeTabIndex + 1) % len(m.config.Views)
-				m.updateListForTab()
-				return m, nil
-			case "shift+tab", "h", "left":
-				m.activeTabIndex = (m.activeTabIndex - 1 + len(m.config.Views)) % len(m.config.Views)
-				m.updateListForTab()
-				return m, nil
+			case "j", "down":
+				if m.list.Index() == len(m.list.Items())-1 {
+					m.list.Select(0)
+					return m, nil
+				}
+			case "k", "up":
+				if m.list.Index() == 0 {
+					m.list.Select(len(m.list.Items()) - 1)
+					return m, nil
+				}
 			}
 		}
 
