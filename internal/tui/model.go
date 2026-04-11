@@ -257,13 +257,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "x":
 			if !m.list.SettingFilter() {
 				if i, ok := m.list.SelectedItem().(Item); ok && i.IsAlias {
-					return m, runCommand(i.Command)
+					return m, runCommand(i.Command, m.config.AutoClear)
 				}
 			}
 		case "enter":
 			if i, ok := m.list.SelectedItem().(Item); ok {
 				if i.IsAlias && !m.list.SettingFilter() {
-					return m, runCommand(i.Command)
+					return m, runCommand(i.Command, m.config.AutoClear)
 				}
 				out, _ := m.renderer.Render(i.ItemContent)
 				m.viewport.SetContent(out)
@@ -278,10 +278,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func runCommand(command string) tea.Cmd {
+func runCommand(command string, autoClear bool) tea.Cmd {
 	shell := os.Getenv("SHELL")
 	if shell == "" { shell = "zsh" }
-	c := exec.Command(shell, "-c", command+"; echo ''; echo 'Press Enter to return...'; read")
+	
+	fullCmd := command
+	if autoClear {
+		fullCmd = "clear && " + command
+	}
+
+	c := exec.Command(shell, "-c", fullCmd+"; echo ''; echo 'Press Enter to return...'; read")
 	return tea.ExecProcess(c, func(err error) tea.Msg { return nil })
 }
 

@@ -15,6 +15,9 @@ views:
 # Pagination style: "numeric" (e.g., 1/3) or "dots" (e.g., •●•)
 pagination: "numeric"
 
+# Automatically clear the terminal before running a shortcut
+auto_clear: false
+
 # Customize your TUI colors (Catppuccin Mocha defaults shown)
 theme:
   primary: "#a6e3a1"   # Green (Tabs/Headers)
