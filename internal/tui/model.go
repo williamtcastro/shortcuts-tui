@@ -17,7 +17,8 @@ import (
 
 // --- Layout Constants ---
 const (
-	tabHeight    = 2 // Name + Border
+	headerHeight = 1
+	tabHeight    = 2 // Tabs line + Horizontal separator
 	footerHeight = 1
 )
 
@@ -28,7 +29,7 @@ type Styles struct {
 	Footer       lipgloss.Style
 	ActiveTab    lipgloss.Style
 	InactiveTab  lipgloss.Style
-	TabBorder    lipgloss.Style
+	TabSeparator lipgloss.Style
 	SelectionBar lipgloss.Style
 	Title        lipgloss.Style
 	Desc         lipgloss.Style
@@ -54,17 +55,15 @@ func DefaultStyles(cfg config.Config) Styles {
 			MarginTop(1),
 		ActiveTab: lipgloss.NewStyle().
 			Foreground(primary).
-			Border(lipgloss.NormalBorder(), false, false, true, false).
-			BorderForeground(primary).
+			Background(lipgloss.Color("236")). // Subtle block highlight
 			Padding(0, 2).
 			Bold(true),
 		InactiveTab: lipgloss.NewStyle().
 			Foreground(secondary).
-			Padding(0, 2).
-			MarginBottom(1), // Match height of ActiveTab's border
-		TabBorder: lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder(), false, false, true, false).
-			BorderForeground(lipgloss.Color("238")),
+			Padding(0, 2),
+		TabSeparator: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("238")).
+			Border(lipgloss.NormalBorder(), false, false, true, false), // Single clean line
 		SelectionBar: lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder(), false, false, false, true).
 			BorderForeground(primary).
@@ -94,9 +93,7 @@ func (d itemDelegate) Spacing() int                              { return 0 }
 func (d itemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
 func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
 	i, ok := listItem.(Item)
-	if !ok {
-		return
-	}
+	if !ok { return }
 
 	titleStr := i.Title()
 	descStr := i.Description()
@@ -161,9 +158,7 @@ func New(items []list.Item, cfg config.Config) Model {
 }
 
 func (m *Model) updateListForTab() {
-	if len(m.config.Views) == 0 {
-		return
-	}
+	if len(m.config.Views) == 0 { return }
 	activeView := m.config.Views[m.activeTabIndex]
 	var filtered []list.Item
 	for _, item := range m.allItem {
@@ -175,9 +170,7 @@ func (m *Model) updateListForTab() {
 	m.list.ResetSelected()
 }
 
-func (m Model) Init() tea.Cmd {
-	return nil
-}
+func (m Model) Init() tea.Cmd { return nil }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -186,10 +179,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		h, v := m.styles.App.GetFrameSize()
-		// List height calculation
-		m.list.SetSize(msg.Width-h, msg.Height-v-tabHeight-footerHeight-1)
+		// height - app padding - tab line - separator line - footer - extra safety
+		listHeight := msg.Height - v - tabHeight - footerHeight - 1
 		
-		// Viewport height (includes its own border)
+		m.list.SetSize(msg.Width-h, listHeight)
 		m.viewport = viewport.New(msg.Width-h-4, msg.Height-v-8)
 		m.ready = true
 
@@ -234,9 +227,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch msg.String() {
 		case "ctrl+c", "q":
-			if !m.list.SettingFilter() {
-				return m, tea.Quit
-			}
+			if !m.list.SettingFilter() { return m, tea.Quit }
 		case "x":
 			if !m.list.SettingFilter() {
 				if i, ok := m.list.SelectedItem().(Item); ok && i.IsAlias {
@@ -269,22 +260,18 @@ func runCommand(command string) tea.Cmd {
 }
 
 func (m Model) View() string {
-	if !m.ready {
-		return "\n  Initializing..."
-	}
+	if !m.ready { return "\n  Initializing..." }
 
 	if m.showViewport {
 		i := m.list.SelectedItem().(Item)
 		header := m.styles.DocHeader.Render("󰧮 " + i.Title())
 		view := m.styles.DocViewport.Render(m.viewport.View())
-		
 		helpText := m.styles.Dim.Render(fmt.Sprintf(" %3.f%% • q/esc: back • j/k: scroll", m.viewport.ScrollPercent()*100))
 		footer := m.styles.Footer.Render(helpText)
-		
 		return m.styles.App.Render(lipgloss.JoinVertical(lipgloss.Left, header, view, footer))
 	}
 
-	// 1. Tab Bar
+	// 1. Render Tab Bar
 	var tabs []string
 	for i, v := range m.config.Views {
 		label := strings.ToUpper(v.Name)
@@ -296,15 +283,16 @@ func (m Model) View() string {
 	}
 	tabRow := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 	
-	width, _ := m.styles.App.GetFrameSize()
-	fullWidth := m.width - width
-	tabBar := m.styles.TabBorder.Width(fullWidth).Render(tabRow)
+	// 2. Full-width separator line
+	h, _ := m.styles.App.GetFrameSize()
+	fullWidth := m.width - h
+	tabSeparator := m.styles.TabSeparator.Width(fullWidth).Render("")
 
-	// 2. Help Footer
+	// 3. Help Footer
 	help := m.styles.Footer.Render("enter: run/view • x: exec • tab: switch • /: filter • q: quit")
 	
-	// 3. Assemble
-	content := lipgloss.JoinVertical(lipgloss.Left, tabBar, m.list.View(), help)
+	// 4. Final Assembly
+	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, tabSeparator, m.list.View(), help)
 	
 	return m.styles.App.Render(content)
 }
