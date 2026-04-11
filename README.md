@@ -62,6 +62,9 @@ mv shortcuts-tui /usr/local/bin/ # Or any directory in your $PATH
 
 By default, **Shortcuts TUI** looks for `~/.config/shortcuts/config.yaml`.
 
+<details>
+<summary><b>Click to expand Configuration Details</b></summary>
+
 ### Example `config.yaml`
 ```yaml
 # Define your tabs (Views)
@@ -97,9 +100,14 @@ alias gs="git status" # Show current git status
 ```
 *The TUI parses the text after the `#` as the description.*
 
+</details>
+
 ---
 
 ## ⌨️ Keybindings
+
+<details>
+<summary><b>Click to expand Keybindings Reference</b></summary>
 
 ### Main List View
 | Key | Action |
@@ -120,6 +128,9 @@ alias gs="git status" # Show current git status
 | `f` / `b` | Scroll full page |
 | `g` / `G` | Jump to top / bottom |
 | `q` / `Esc` | Return to list |
+
+</details>
+
 
 ---
 
