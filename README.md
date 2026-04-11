@@ -2,6 +2,10 @@
 
 A high-performance Terminal User Interface (TUI) for exploring, searching, and executing shell aliases and documentation guides. Built with Go and the Charm Bracelet [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework.
 
+---
+
+> **Note:** This project was developed and documented with the assistance of AI (**Gemini CLI**).
+
 ## Features
 
 - **🔍 Live Search:** Press `/` to search through all aliases, commands, and descriptions.
