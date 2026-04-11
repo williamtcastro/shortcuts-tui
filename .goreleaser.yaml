@@ -39,7 +39,7 @@ brews:
     # Repository to push the formula to
     repository:
       owner: williamtcastro
-      name: tap
+      name: homebrew-tap
       # The token must have repo scope
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     
