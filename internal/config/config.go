@@ -43,9 +43,10 @@ func LoadConfig() Config {
 	}
 
 	viper.SetDefault("views", defaultViews)
-	viper.SetDefault("theme.primary", "#25A065")
-	viper.SetDefault("theme.secondary", "#545454")
-	viper.SetDefault("theme.text", "#FFFDF5")
+	// Catppuccin Mocha Defaults
+	viper.SetDefault("theme.primary", "#a6e3a1")   // Green
+	viper.SetDefault("theme.secondary", "#6c7086") // Overlay0
+	viper.SetDefault("theme.text", "#cdd6f4")      // Text
 
 	// Setup config file search paths
 	viper.SetConfigName("config")

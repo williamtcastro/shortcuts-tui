@@ -185,7 +185,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		h, v := appStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v-4) // Deduct more for tabs and footer
+		// Deduct 5: 1 (tab row) + 1 (empty line) + 1 (help footer) + 2 (extra padding safety)
+		m.list.SetSize(msg.Width-h, msg.Height-v-5)
 
 		m.viewport = viewport.New(msg.Width-h, msg.Height-v-4)
 		m.viewport.YPosition = 4
@@ -281,7 +282,7 @@ func (m Model) View() string {
 		return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, header, "\n", m.viewport.View(), "\n", footer))
 	}
 
-	// Render Dynamic Tabs
+	// 1. Tab Row
 	var tabs []string
 	for i, v := range m.config.Views {
 		label := strings.ToUpper(v.Name)
@@ -293,12 +294,13 @@ func (m Model) View() string {
 	}
 	tabRow := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 	
-	// Main Layout
-	// JoinVertical with an empty line to push the list down from the tabs
-	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, "\n", m.list.View())
-	
-	// Help/Footer at the very bottom
+	// 2. Help/Footer
 	help := m.helpStyle.Render("enter: run/view • x: execute • tab: switch tab • /: search • q: quit")
 	
-	return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, content, "\n", help))
+	// Total deduction in WindowSizeMsg was 5 lines.
+	// This layout adds: tabRow (1) + empty line (1) + list (variable) + help (1) = 3 fixed lines + list.
+	// The list fills the remaining space allocated via SetSize.
+	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, "\n", m.list.View(), help)
+	
+	return appStyle.Render(content)
 }
