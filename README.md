@@ -12,7 +12,7 @@ A high-performance Terminal User Interface (TUI) for exploring, searching, and e
 - **⚡️ Direct Execution:** Press **Enter** on any alias to execute it immediately in your shell.
 - **📖 Markdown Support:** Renders documentation guides with beautiful formatting.
 - **⌨️ Vim Keybindings:** Full support for Vim motions for navigation.
-- **📂 Automatic Parsing:** Automatically extracts aliases and their comments from your `.zsh` files.
+- **📂 Multi-Tab Interface:** Separate views for Aliases/Functions and Documentation Guides.
 
 ## How to Use
 
@@ -53,6 +53,8 @@ Simply run `shortcuts-tui` from your terminal.
 | Key | Action |
 |-----|--------|
 | `j` / `k` | Move selection down / up |
+| `Tab` / `l` | Switch to next tab |
+| `Shift+Tab` / `h` | Switch to previous tab |
 | `/` | Start searching/filtering |
 | `Enter` | **Run Alias** or **View Document** |
 | `q` / `Ctrl+C` | Quit |

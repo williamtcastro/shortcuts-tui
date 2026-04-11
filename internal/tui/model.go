@@ -13,6 +13,13 @@ import (
 	"github.com/williamtcastro/shortcuts-tui/internal/config"
 )
 
+type Tab int
+
+const (
+	TabAliases Tab = iota
+	TabDocs
+)
+
 var (
 	appStyle = lipgloss.NewStyle().Padding(1, 2)
 )
@@ -27,20 +34,41 @@ type Model struct {
 	showViewport bool
 	titleStyle   lipgloss.Style
 	infoStyle    func(strings ...string) string
+	
+	activeTab    Tab
+	allItem      []list.Item
+	
+	activeTabStyle   lipgloss.Style
+	inactiveTabStyle lipgloss.Style
 }
 
 func New(items []list.Item, cfg config.Config) Model {
-	
+	primary := lipgloss.Color(cfg.Theme.PrimaryColor)
+	secondary := lipgloss.Color(cfg.Theme.SecondaryColor)
+	text := lipgloss.Color(cfg.Theme.TextColor)
+
 	titleStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(cfg.Theme.TextColor)).
-		Background(lipgloss.Color(cfg.Theme.PrimaryColor)).
+		Foreground(text).
+		Background(primary).
 		Padding(0, 1)
 
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(cfg.Theme.SecondaryColor)).
+		Foreground(secondary).
 		Render
 
-	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
+	activeTabStyle := lipgloss.NewStyle().
+		Foreground(text).
+		Background(primary).
+		Padding(0, 2).
+		MarginRight(1).
+		Bold(true)
+
+	inactiveTabStyle := lipgloss.NewStyle().
+		Foreground(primary).
+		Padding(0, 2).
+		MarginRight(1)
+
+	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "Shortcuts Explorer"
 	l.Styles.Title = titleStyle
 
@@ -49,14 +77,46 @@ func New(items []list.Item, cfg config.Config) Model {
 		glamour.WithWordWrap(80),
 	)
 
-	return Model{
-		list:       l,
-		renderer:   renderer,
-		titleStyle: titleStyle,
-		infoStyle:  infoStyle,
+	m := Model{
+		list:             l,
+		renderer:         renderer,
+		titleStyle:       titleStyle,
+		infoStyle:        infoStyle,
+		activeTab:        TabAliases,
+		allItem:          items,
+		activeTabStyle:   activeTabStyle,
+		inactiveTabStyle: inactiveTabStyle,
 	}
+	
+	m.updateListForTab()
+	return m
 }
 
+func (m *Model) updateListForTab() {
+	var filtered []list.Item
+	for _, item := range m.allItem {
+		if i, ok := item.(Item); ok {
+			switch m.activeTab {
+			case TabAliases:
+				if i.IsAlias || i.Category == "Functions" {
+					filtered = append(filtered, item)
+				}
+			case TabDocs:
+				if !i.IsAlias && i.Category != "Functions" {
+					filtered = append(filtered, item)
+				}
+			}
+		}
+	}
+	m.list.SetItems(filtered)
+	m.list.ResetSelected()
+	
+	if m.activeTab == TabAliases {
+		m.list.Title = "Aliases & Functions"
+	} else {
+		m.list.Title = "Documentation Guides"
+	}
+}
 
 func (m Model) Init() tea.Cmd {
 	return nil
@@ -71,7 +131,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		h, v := appStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v)
+		m.list.SetSize(msg.Width-h, msg.Height-v-3) // Leave space for tabs
 
 		m.viewport = viewport.New(msg.Width-h, msg.Height-v-4)
 		m.viewport.YPosition = 4
@@ -114,6 +174,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
 			return m, cmd
+		}
+
+		if !m.list.SettingFilter() {
+			switch msg.String() {
+			case "tab", "l", "right":
+				m.activeTab = (m.activeTab + 1) % 2
+				m.updateListForTab()
+				return m, nil
+			case "shift+tab", "h", "left":
+				m.activeTab = (m.activeTab - 1 + 2) % 2
+				m.updateListForTab()
+				return m, nil
+			}
 		}
 
 		switch msg.String() {
@@ -170,5 +243,18 @@ func (m Model) View() string {
 		return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, header, m.viewport.View(), footer))
 	}
 
-	return appStyle.Render(m.list.View())
+	// Render Tabs
+	var tabs []string
+	titles := []string{"ALIASES", "DOCS"}
+	for i, t := range titles {
+		if Tab(i) == m.activeTab {
+			tabs = append(tabs, m.activeTabStyle.Render(t))
+		} else {
+			tabs = append(tabs, m.inactiveTabStyle.Render(t))
+		}
+	}
+	
+	row := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
+	
+	return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, row, "\n", m.list.View()))
 }
