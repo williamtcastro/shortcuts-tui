@@ -23,16 +23,26 @@ Shortcuts TUI looks for ZSH alias definitions with optional trailing comments fo
 alias gs="git status" # Show current git status
 ```
 
-### 2. Configure Paths
-Set the following environment variables in your `.zshrc` or `.bashrc` to point the TUI to your files:
+### 2. Configuration (`config.yaml`)
+By default, the TUI looks for a config file at `~/.config/shortcuts/config.yaml`. This allows you to customize the script paths and UI colors. If no config exists, it falls back to sensible defaults.
 
-```zsh
-export SHORTCUTS_SCRIPTS_DIR="$HOME/dotfiles/scripts"
-export SHORTCUTS_DOCS_DIR="$HOME/dotfiles/docs"
+**Example `config.yaml`:**
+```yaml
+# Define where your ZSH scripts and markdown docs live
+scripts_dirs:
+  - "/Users/youruser/dotfiles/scripts"
+docs_dirs:
+  - "/Users/youruser/dotfiles/docs"
+  - "./docs"
+
+# Customize your TUI colors!
+theme:
+  primary: "#25A065"
+  secondary: "#545454"
+  text: "#FFFDF5"
 ```
 
-- `SHORTCUTS_SCRIPTS_DIR`: Directory containing your `.zsh` files with aliases.
-- `SHORTCUTS_DOCS_DIR`: Directory containing `.md` files you want to browse.
+You can still use environment variables (`SHORTCUTS_SCRIPTS_DIRS`, etc.) if preferred.
 
 ### 3. Launch the TUI
 Simply run `shortcuts-tui` from your terminal.

@@ -10,19 +10,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/williamtcastro/shortcuts-tui/internal/config"
 )
 
 var (
 	appStyle = lipgloss.NewStyle().Padding(1, 2)
-
-	titleStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
-		Background(lipgloss.Color("#25A065")).
-		Padding(0, 1)
-
-	infoStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#545454")).
-		Render
 )
 
 type Model struct {
@@ -33,9 +25,21 @@ type Model struct {
 	height       int
 	renderer     *glamour.TermRenderer
 	showViewport bool
+	titleStyle   lipgloss.Style
+	infoStyle    func(strings ...string) string
 }
 
-func New(items []list.Item) Model {
+func New(items []list.Item, cfg config.Config) Model {
+	
+	titleStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(cfg.Theme.TextColor)).
+		Background(lipgloss.Color(cfg.Theme.PrimaryColor)).
+		Padding(0, 1)
+
+	infoStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(cfg.Theme.SecondaryColor)).
+		Render
+
 	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "Shortcuts Explorer"
 	l.Styles.Title = titleStyle
@@ -46,10 +50,13 @@ func New(items []list.Item) Model {
 	)
 
 	return Model{
-		list:     l,
-		renderer: renderer,
+		list:       l,
+		renderer:   renderer,
+		titleStyle: titleStyle,
+		infoStyle:  infoStyle,
 	}
 }
+
 
 func (m Model) Init() tea.Cmd {
 	return nil
@@ -158,8 +165,8 @@ func (m Model) View() string {
 
 	if m.showViewport {
 		i := m.list.SelectedItem().(Item)
-		header := titleStyle.Render(i.Title())
-		footer := infoStyle(fmt.Sprintf("%3.f%% (q/esc to back, j/k to scroll)", m.viewport.ScrollPercent()*100))
+		header := m.titleStyle.Render(i.Title())
+		footer := m.infoStyle(fmt.Sprintf("%3.f%% (q/esc to back, j/k to scroll)", m.viewport.ScrollPercent()*100))
 		return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, header, m.viewport.View(), footer))
 	}
 
