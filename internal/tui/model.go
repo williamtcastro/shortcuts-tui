@@ -326,12 +326,27 @@ func (m Model) View() string {
 		m.styles.KeyStyle.Render(" / "), m.styles.Dim.Render("filter"),
 	}
 	helpBar := lipgloss.JoinHorizontal(lipgloss.Center, keys...)
+// 3. Pagination Info
+var pagination string
+if m.config.Pagination == "dots" {
+	totalPages := m.list.Paginator.TotalPages
+	currentPage := m.list.Paginator.Page
+	for i := 0; i < totalPages; i++ {
+		if i == currentPage {
+			pagination += "●"
+		} else {
+			pagination += "•"
+		}
+	}
+} else {
+	pagination = fmt.Sprintf(" %d/%d ", m.list.Paginator.Page+1, m.list.Paginator.TotalPages)
+}
 
-	pagination := fmt.Sprintf(" %d/%d ", m.list.Paginator.Page+1, m.list.Paginator.TotalPages)
-	status := m.styles.StatusStyle.Render(pagination)
-	
-	// Create the full width footer with help on left and pagination on right
-	footerContent := lipgloss.JoinHorizontal(lipgloss.Top, helpBar, lipgloss.NewStyle().Width(fullWidth-lipgloss.Width(helpBar)).Align(lipgloss.Right).Render(status))
+status := m.styles.StatusStyle.Render(pagination)
+
+// Create the full width footer with help on left and pagination on right
+footerContent := lipgloss.JoinHorizontal(lipgloss.Top, helpBar, lipgloss.NewStyle().Width(fullWidth-lipgloss.Width(helpBar)).Align(lipgloss.Right).Render(status))
+
 
 	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, tabSeparator, m.list.View(), m.styles.Footer.Render(footerContent))
 	

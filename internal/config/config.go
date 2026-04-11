@@ -24,8 +24,9 @@ type ViewConfig struct {
 }
 
 type Config struct {
-	Views []ViewConfig `mapstructure:"views"`
-	Theme Theme        `mapstructure:"theme"`
+	Views      []ViewConfig `mapstructure:"views"`
+	Theme      Theme        `mapstructure:"theme"`
+	Pagination string       `mapstructure:"pagination"` // "numeric" or "dots"
 }
 
 func LoadConfig() Config {
@@ -46,6 +47,7 @@ func LoadConfig() Config {
 	}
 
 	viper.SetDefault("views", defaultViews)
+	viper.SetDefault("pagination", "numeric")
 	
 	// Catppuccin Mocha Defaults
 	viper.SetDefault("theme.primary", "#a6e3a1")   // Green
