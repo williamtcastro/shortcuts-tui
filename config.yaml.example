@@ -18,6 +18,9 @@ pagination: "numeric"
 # Automatically clear the terminal before running a shortcut
 auto_clear: false
 
+# Automatically exit the TUI after running a shortcut or copying a command
+auto_exit: false
+
 # Customize your TUI colors (Catppuccin Mocha defaults shown)
 theme:
   primary: "#a6e3a1"   # Green (Tabs/Headers)

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -254,16 +255,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			if !m.list.SettingFilter() { return m, tea.Quit }
+		case "y":
+			if !m.list.SettingFilter() {
+				if i, ok := m.list.SelectedItem().(Item); ok && i.IsAlias {
+					clipboard.WriteAll(i.Command)
+					if m.config.AutoExit {
+						return m, tea.Quit
+					}
+				}
+			}
 		case "x":
 			if !m.list.SettingFilter() {
 				if i, ok := m.list.SelectedItem().(Item); ok && i.IsAlias {
-					return m, runCommand(i.Command, m.config.AutoClear)
+					return m, runCommand(i.Command, m.config.AutoClear, m.config.AutoExit)
 				}
 			}
 		case "enter":
 			if i, ok := m.list.SelectedItem().(Item); ok {
 				if i.IsAlias && !m.list.SettingFilter() {
-					return m, runCommand(i.Command, m.config.AutoClear)
+					return m, runCommand(i.Command, m.config.AutoClear, m.config.AutoExit)
 				}
 				out, _ := m.renderer.Render(i.ItemContent)
 				m.viewport.SetContent(out)
@@ -278,7 +288,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func runCommand(command string, autoClear bool) tea.Cmd {
+func runCommand(command string, autoClear bool, autoExit bool) tea.Cmd {
 	shell := os.Getenv("SHELL")
 	if shell == "" { shell = "zsh" }
 	
@@ -288,7 +298,12 @@ func runCommand(command string, autoClear bool) tea.Cmd {
 	}
 
 	c := exec.Command(shell, "-c", fullCmd+"; echo ''; echo 'Press Enter to return...'; read")
-	return tea.ExecProcess(c, func(err error) tea.Msg { return nil })
+	return tea.ExecProcess(c, func(err error) tea.Msg {
+		if autoExit {
+			return tea.Quit()
+		}
+		return nil
+	})
 }
 
 func (m Model) View() string {
@@ -309,6 +324,7 @@ func (m Model) View() string {
 		return m.styles.App.Render(lipgloss.JoinVertical(lipgloss.Left, header, view, m.styles.Footer.Render(footer)))
 	}
 
+	// 1. Render Tab Bar
 	var tabs []string
 	for i, v := range m.config.Views {
 		label := strings.ToUpper(v.Name)
@@ -325,35 +341,38 @@ func (m Model) View() string {
 	if fullWidth < 0 { fullWidth = 0 }
 	tabSeparator := m.styles.Dim.Render(strings.Repeat("─", fullWidth))
 
+	// 2. Build Help Bar with high-contrast keys
 	keys := []string{
 		m.styles.KeyStyle.Render(" enter "), m.styles.Dim.Render("run • "),
 		m.styles.KeyStyle.Render(" x "), m.styles.Dim.Render("exec • "),
+		m.styles.KeyStyle.Render(" y "), m.styles.Dim.Render("copy • "),
 		m.styles.KeyStyle.Render(" tab "), m.styles.Dim.Render("switch • "),
 		m.styles.KeyStyle.Render(" / "), m.styles.Dim.Render("filter"),
 	}
 	helpBar := lipgloss.JoinHorizontal(lipgloss.Center, keys...)
-// 3. Pagination Info
-var pagination string
-if m.config.Pagination == "dots" {
-	totalPages := m.list.Paginator.TotalPages
-	currentPage := m.list.Paginator.Page
-	for i := 0; i < totalPages; i++ {
-		if i == currentPage {
-			pagination += "●"
-		} else {
-			pagination += "•"
+
+	// 3. Pagination Info
+	var pagination string
+	if m.config.Pagination == "dots" {
+		totalPages := m.list.Paginator.TotalPages
+		currentPage := m.list.Paginator.Page
+		for i := 0; i < totalPages; i++ {
+			if i == currentPage {
+				pagination += "●"
+			} else {
+				pagination += "•"
+			}
 		}
+	} else {
+		pagination = fmt.Sprintf(" %d/%d ", m.list.Paginator.Page+1, m.list.Paginator.TotalPages)
 	}
-} else {
-	pagination = fmt.Sprintf(" %d/%d ", m.list.Paginator.Page+1, m.list.Paginator.TotalPages)
-}
+	
+	status := m.styles.StatusStyle.Render(pagination)
+	
+	// Create the full width footer with help on left and pagination on right
+	footerContent := lipgloss.JoinHorizontal(lipgloss.Top, helpBar, lipgloss.NewStyle().Width(fullWidth-lipgloss.Width(helpBar)).Align(lipgloss.Right).Render(status))
 
-status := m.styles.StatusStyle.Render(pagination)
-
-// Create the full width footer with help on left and pagination on right
-footerContent := lipgloss.JoinHorizontal(lipgloss.Top, helpBar, lipgloss.NewStyle().Width(fullWidth-lipgloss.Width(helpBar)).Align(lipgloss.Right).Render(status))
-
-
+	// 4. Final Assembly (JoinVertical adds 1 newline between each element)
 	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, tabSeparator, m.list.View(), m.styles.Footer.Render(footerContent))
 	
 	return m.styles.App.Render(content)
