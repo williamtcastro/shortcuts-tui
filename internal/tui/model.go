@@ -126,9 +126,8 @@ func New(items []list.Item, cfg config.Config) Model {
 	}
 
 	l := list.New([]list.Item{}, delegate, 0, 0)
-	l.Title = "SHORTCUTS"
-	l.Styles.Title = titleStyle
-	l.SetShowHelp(false) // We render our own help
+	l.SetShowTitle(false) // Hide internal title to avoid "double title"
+	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
 
 	renderer, _ := glamour.NewTermRenderer(
@@ -186,7 +185,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		h, v := appStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v-6) // Space for tabs and help
+		m.list.SetSize(msg.Width-h, msg.Height-v-4) // Deduct more for tabs and footer
 
 		m.viewport = viewport.New(msg.Width-h, msg.Height-v-4)
 		m.viewport.YPosition = 4
@@ -294,8 +293,12 @@ func (m Model) View() string {
 	}
 	tabRow := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 	
-	// Help/Footer
+	// Main Layout
+	// JoinVertical with an empty line to push the list down from the tabs
+	content := lipgloss.JoinVertical(lipgloss.Left, tabRow, "\n", m.list.View())
+	
+	// Help/Footer at the very bottom
 	help := m.helpStyle.Render("enter: run/view • x: execute • tab: switch tab • /: search • q: quit")
 	
-	return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, tabRow, "\n", m.list.View(), "\n", help))
+	return appStyle.Render(lipgloss.JoinVertical(lipgloss.Left, content, "\n", help))
 }
