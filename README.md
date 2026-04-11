@@ -10,6 +10,7 @@ A high-performance Terminal User Interface (TUI) for exploring, searching, and e
 
 - **🔍 Deep Search:** Press `/` to search through titles, descriptions, **full commands**, and document content.
 - **⚡️ Direct Execution:** Press **Enter** on any alias to execute it immediately in your shell.
+- **📋 Copy to Clipboard:** Press **y** to copy any alias command to your system clipboard.
 - **📖 Markdown Support:** Renders documentation guides with beautiful formatting.
 - **⌨️ Vim Keybindings:** Full support for Vim motions for navigation.
 - **📂 Multi-Tab Interface:** Separate views for Aliases/Functions and Documentation Guides via `config.yaml`.
@@ -29,6 +30,30 @@ alias gs="git status" # Show current git status
 ### 2. Configuration (`config.yaml`)
 By default, the TUI looks for a config file at `~/.config/shortcuts/config.yaml`.
 
+<details>
+<summary><b>Click to expand Configuration Options</b></summary>
+
+### View Configuration
+Each view represents a tab in the TUI.
+- `name`: The display name of the tab.
+- `type`: Either `alias` (for .zsh files) or `doc` (for .md files).
+- `dirs`: List of directories to scan.
+
+### Behavioral Settings
+- `pagination`: `"numeric"` (1/3) or `"dots"` (•●•).
+- `auto_clear`: `true/false` - Clear the terminal before running a shortcut.
+- `auto_exit`: `true/false` - Close the TUI immediately after running or copying.
+
+### Theme Colors (Hex codes)
+- `primary`: Tabs and headers.
+- `secondary`: Dimmed text and borders.
+- `text`: Main content text.
+- `accent`: Pointer and active selection border.
+- `mauve`: Item descriptions.
+- `flamingo`: Search bar prompt and cursor.
+
+</details>
+
 **Example `config.yaml`:**
 ```yaml
 # Define your custom tabs/views
@@ -36,20 +61,24 @@ views:
   - name: "Aliases"
     type: "alias"
     dirs: 
-      - "/Users/youruser/dotfiles/scripts"
+      - "$HOME/dotfiles/scripts"
   - name: "Docs"
     type: "doc"
     dirs:
-      - "/Users/youruser/dotfiles/docs"
+      - "$HOME/dotfiles/docs"
 
-# Customize your TUI colors (Catppuccin Mocha defaults shown)
+pagination: "dots"
+auto_clear: false
+auto_exit: false
+
+# Catppuccin Mocha Defaults
 theme:
-  primary: "#a6e3a1"   # Green (Tabs/Headers)
-  secondary: "#6c7086" # Overlay0 (Dimmed text)
-  text: "#cdd6f4"      # Text (Default text)
-  accent: "#f9e2af"    # Yellow (Active cursor)
-  mauve: "#cba6f7"     # Mauve (Descriptions)
-  flamingo: "#f2cdcd"  # Flamingo (Search bar)
+  primary: "#a6e3a1"
+  secondary: "#6c7086"
+  text: "#cdd6f4"
+  accent: "#f9e2af"
+  mauve: "#cba6f7"
+  flamingo: "#f2cdcd"
 ```
 
 ### 3. Launch the TUI
@@ -66,6 +95,7 @@ Simply run `shortcuts-tui` from your terminal.
 | `/` | Start searching/filtering |
 | `Enter` | **Run Alias** or **View Document** |
 | `x` | Execute alias (if not in search mode) |
+| `y` | Copy alias command to clipboard |
 | `q` / `Ctrl+C` | Quit |
 
 ### Viewport (Document Viewer)
