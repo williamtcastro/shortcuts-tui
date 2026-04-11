@@ -116,8 +116,7 @@ func New(items []list.Item, cfg config.Config) Model {
 		PaddingLeft(1)
 
 	helpStyle := lipgloss.NewStyle().
-		Foreground(secondary).
-		Faint(true)
+		Foreground(secondary)
 
 	delegate := itemDelegate{
 		activeColor:    primary,

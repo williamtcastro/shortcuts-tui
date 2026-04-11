@@ -15,6 +15,20 @@ import (
 
 var aliasRegex = regexp.MustCompile(`^alias\s+([^=]+)="([^"]+)"\s*(?:#\s*(.*))?`)
 
+var blocklist = map[string]bool{
+	"..":    true,
+	"...":   true,
+	"....":  true,
+	"-":     true,
+	"ls":    true,
+	"ll":    true,
+	"la":    true,
+	"tree":  true,
+	"cat":   true,
+	"v":     true,
+	"vim":   true,
+}
+
 func LoadItems(cfg config.Config) []list.Item {
 	items := []list.Item{}
 
@@ -48,6 +62,12 @@ func LoadItems(cfg config.Config) []list.Item {
 						matches := aliasRegex.FindStringSubmatch(line)
 						if len(matches) >= 3 {
 							name := matches[1]
+							
+							// Filter out blocklisted aliases
+							if blocklist[name] {
+								continue
+							}
+
 							cmd := matches[2]
 							desc := ""
 							if len(matches) > 3 {
