@@ -140,5 +140,9 @@ This project was developed and documented with the assistance of **Gemini CLI**.
 - Executes commands using your default `$SHELL`.
 - Operates entirely offline with no telemetry.
 
+## 📈 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=williamtcastro/shortcuts-tui&type=Date)](https://star-history.com/#williamtcastro/shortcuts-tui&Date)
+
 ## 📄 License
 MIT
