@@ -51,13 +51,24 @@ alias gc="git commit -v" # Commit changes with verbose output
 
 ---
 
+## 🗂 Automatic Subdivisions
+You can group shortcuts within a single tab by using subdirectories. This is ideal for organizing your tools into `Local`, `Work`, or `GitHub` projects.
+
+1. Create a subfolder in your scripts directory: `~/dotfiles/scripts/work/`.
+2. Move your `.zsh` files there: `work/git.zsh`.
+3. The TUI will display these items with a subdivision prefix: **`[Work > Git]`**.
+
+*Tip: Subdivisions are indexed for search. Type `work` to instantly filter all work-related tools.*
+
+---
+
 ## ⌨️ Navigation Reference
 
 ### List View
 - `j` / `k`: Navigation
 - `Tab` / `l`: Next Tab
 - `Shift+Tab` / `h`: Previous Tab
-- `/`: Search
+- `/`: Search (Titles, Descriptions, Subdivisions)
 - `Enter`: Run/View
 - `y`: Copy to Clipboard
 - `q`: Quit

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/atotto/clipboard"
@@ -14,6 +15,8 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/williamtcastro/shortcuts-tui/internal/config"
+	"github.com/williamtcastro/shortcuts-tui/internal/models"
+	"github.com/williamtcastro/shortcuts-tui/internal/parser"
 )
 
 // --- Layout Constants ---
@@ -104,7 +107,7 @@ func (d itemDelegate) Height() int                               { return 1 }
 func (d itemDelegate) Spacing() int                              { return 0 }
 func (d itemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
 func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(Item)
+	i, ok := listItem.(models.Item)
 	if !ok { return }
 
 	titleStr := i.Title()
@@ -178,7 +181,7 @@ func (m *Model) updateListForTab() {
 	activeView := m.config.Views[m.activeTabIndex]
 	var filtered []list.Item
 	for _, item := range m.allItem {
-		if i, ok := item.(Item); ok && i.ViewName == activeView.Name {
+		if i, ok := item.(models.Item); ok && i.ViewName == activeView.Name {
 			filtered = append(filtered, item)
 		}
 	}
@@ -253,11 +256,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch msg.String() {
+		case "e":
+			if !m.list.SettingFilter() {
+				home, _ := os.UserHomeDir()
+				editor := os.Getenv("EDITOR")
+				if editor == "" { editor = "vim" }
+				configPath := filepath.Join(home, ".config", "shortcuts-tui", "config.yaml")
+				
+				// Create the directory if it doesn't exist
+				os.MkdirAll(filepath.Dir(configPath), 0755)
+				
+				return m, tea.ExecProcess(exec.Command(editor, configPath), func(err error) tea.Msg {
+					m.config = config.LoadConfig()
+					m.allItem = parser.LoadItems(m.config)
+					m.updateListForTab()
+					return nil
+				})
+			}
+		case "r":
+			if !m.list.SettingFilter() {
+				m.config = config.LoadConfig()
+				m.allItem = parser.LoadItems(m.config)
+				m.updateListForTab()
+				return m, nil
+			}
 		case "ctrl+c", "q":
 			if !m.list.SettingFilter() { return m, tea.Quit }
 		case "y":
 			if !m.list.SettingFilter() {
-				if i, ok := m.list.SelectedItem().(Item); ok && i.IsAlias {
+				if i, ok := m.list.SelectedItem().(models.Item); ok && i.IsAlias {
 					clipboard.WriteAll(i.Command)
 					if m.config.AutoExit {
 						return m, tea.Quit
@@ -266,12 +293,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "x":
 			if !m.list.SettingFilter() {
-				if i, ok := m.list.SelectedItem().(Item); ok && i.IsAlias {
+				if i, ok := m.list.SelectedItem().(models.Item); ok && i.IsAlias {
 					return m, runCommand(i.Command, m.config.AutoClear, m.config.AutoExit)
 				}
 			}
 		case "enter":
-			if i, ok := m.list.SelectedItem().(Item); ok {
+			if i, ok := m.list.SelectedItem().(models.Item); ok {
 				if i.IsAlias && !m.list.SettingFilter() {
 					return m, runCommand(i.Command, m.config.AutoClear, m.config.AutoExit)
 				}
@@ -310,7 +337,7 @@ func (m Model) View() string {
 	if !m.ready { return "\n  Initializing..." }
 
 	if m.showViewport {
-		i := m.list.SelectedItem().(Item)
+		i := m.list.SelectedItem().(models.Item)
 		header := m.styles.DocHeader.Render("󰧮 " + i.Title())
 		view := m.styles.DocViewport.Render(m.viewport.View())
 		
@@ -346,6 +373,8 @@ func (m Model) View() string {
 		m.styles.KeyStyle.Render(" enter "), m.styles.Dim.Render("run • "),
 		m.styles.KeyStyle.Render(" x "), m.styles.Dim.Render("exec • "),
 		m.styles.KeyStyle.Render(" y "), m.styles.Dim.Render("copy • "),
+		m.styles.KeyStyle.Render(" e "), m.styles.Dim.Render("edit config • "),
+		m.styles.KeyStyle.Render(" r "), m.styles.Dim.Render("reload • "),
 		m.styles.KeyStyle.Render(" tab "), m.styles.Dim.Render("switch • "),
 		m.styles.KeyStyle.Render(" / "), m.styles.Dim.Render("filter"),
 	}

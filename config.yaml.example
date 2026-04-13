@@ -1,11 +1,13 @@
 # Shortcuts TUI Configuration Example
 
 # Define your custom tabs/views
+# Subdivisions are automatically derived from subdirectories (e.g., $HOME/dotfiles/scripts/work/git.zsh -> [Work > Git])
 views:
   - name: "Aliases"
     type: "alias"
     dirs: 
       - "$HOME/dotfiles/scripts"
+      - "./examples"
   - name: "Docs"
     type: "doc"
     dirs:

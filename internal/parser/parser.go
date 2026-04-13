@@ -6,11 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/williamtcastro/shortcuts-tui/internal/config"
-	"github.com/williamtcastro/shortcuts-tui/internal/tui"
+	"github.com/williamtcastro/shortcuts-tui/internal/models"
 )
 
 var aliasRegex = regexp.MustCompile(`^alias\s+([^=]+)="([^"]+)"\s*(?:#\s*(.*))?`)
@@ -34,27 +35,38 @@ func LoadItems(cfg config.Config) []list.Item {
 
 	for _, v := range cfg.Views {
 		for _, dir := range v.Dirs {
-			files, err := os.ReadDir(dir)
-			if err != nil {
-				continue
-			}
-
-			for _, f := range files {
-				if f.IsDir() {
-					continue
+			// Expand environment variables in the directory path
+			dir = os.ExpandEnv(dir)
+			
+			err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return nil
 				}
 
-				path := filepath.Join(dir, f.Name())
+				if info.IsDir() {
+					return nil
+				}
+
+				// Calculate relative path for subdivision
+				relPath, _ := filepath.Rel(dir, path)
+				relDir := filepath.Dir(relPath)
+				subdivision := ""
+				if relDir != "." {
+					subdivision = strings.Title(strings.ReplaceAll(relDir, "_", " "))
+				}
+
+				fileName := info.Name()
 				
 				// Process based on view type
-				if v.Type == "alias" && strings.HasSuffix(f.Name(), ".zsh") {
+				if v.Type == "alias" && strings.HasSuffix(fileName, ".zsh") {
 					file, err := os.Open(path)
 					if err != nil {
-						continue
+						return nil
 					}
+					defer file.Close()
 					
-					category := strings.TrimSuffix(f.Name(), ".zsh")
-					category = strings.Title(category)
+					category := strings.TrimSuffix(fileName, ".zsh")
+					category = strings.Title(strings.ReplaceAll(category, "_", " "))
 					
 					scanner := bufio.NewScanner(file)
 					for scanner.Scan() {
@@ -77,44 +89,50 @@ func LoadItems(cfg config.Config) []list.Item {
 								desc = cmd
 							}
 							
-							items = append(items, tui.Item{
+							items = append(items, models.Item{
 								ItemTitle:   name,
 								ItemDesc:    desc,
 								ItemContent: fmt.Sprintf("# %s Alias: %s\n\n**Command:**\n`%s`\n\n**Description:**\n%s", category, name, cmd, desc),
 								Category:    category,
+								Subdivision: subdivision,
 								ViewName:    v.Name,
 								IsAlias:     true,
 								Command:     cmd,
 							})
 						}
 					}
-					file.Close()
 					
 					// Special case for local functions file
-					if f.Name() == "functions.zsh" {
+					if fileName == "functions.zsh" {
 						if data, err := os.ReadFile(path); err == nil {
-							items = append(items, tui.Item{
+							items = append(items, models.Item{
 								ItemTitle:   "Shell Functions",
 								ItemDesc:    "Raw functions file",
 								ItemContent: "```zsh\n" + string(data) + "\n```",
 								Category:    "Functions",
+								Subdivision: subdivision,
 								ViewName:    v.Name,
 							})
 						}
 					}
-				} else if v.Type == "doc" && strings.HasSuffix(f.Name(), ".md") {
+				} else if v.Type == "doc" && strings.HasSuffix(fileName, ".md") {
 					if data, err := os.ReadFile(path); err == nil {
-						name := strings.TrimSuffix(f.Name(), ".md")
+						name := strings.TrimSuffix(fileName, ".md")
 						name = strings.Title(strings.ReplaceAll(name, "_", " "))
-						items = append(items, tui.Item{
+						items = append(items, models.Item{
 							ItemTitle:   name,
 							ItemDesc:    "Markdown Guide",
 							ItemContent: string(data),
 							Category:    "Docs",
+							Subdivision: subdivision,
 							ViewName:    v.Name,
 						})
 					}
 				}
+				return nil
+			})
+			if err != nil {
+				continue
 			}
 		}
 	}
@@ -134,7 +152,7 @@ func LoadItems(cfg config.Config) []list.Item {
 			}
 		}
 
-		items = append(items, tui.Item{
+		items = append(items, models.Item{
 			ItemTitle:   "Neovim Guide",
 			ItemDesc:    "Markdown Guide",
 			ItemContent: string(data),
@@ -142,6 +160,20 @@ func LoadItems(cfg config.Config) []list.Item {
 			ViewName:    targetView,
 		})
 	}
+
+	// Sort items: Subdivision > Category > Title
+	sort.Slice(items, func(i, j int) bool {
+		a := items[i].(models.Item)
+		b := items[j].(models.Item)
+
+		if a.Subdivision != b.Subdivision {
+			return a.Subdivision < b.Subdivision
+		}
+		if a.Category != b.Category {
+			return a.Category < b.Category
+		}
+		return a.ItemTitle < b.ItemTitle
+	})
 
 	return items
 }

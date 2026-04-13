@@ -20,7 +20,7 @@
    ```
 
 2. **Initialize Configuration:**
-   Create a config file at `~/.config/shortcuts/config.yaml`. See the [Configuration](#-configuration) section for details.
+   Create a config file at `~/.config/shortcuts-tui/config.yaml`. See the [Configuration](#-configuration) section for details.
 
 3. **Launch:**
    Simply run `shortcuts-tui`.
@@ -35,7 +35,51 @@
 - **📖 Markdown Documentation:** Renders `.md` files with beautiful formatting for your guides and cheatsheets.
 - **⌨️ Vim-First Navigation:** Full support for `j/k`, `d/u`, and `f/b` motions.
 - **📂 Multi-Tab Interface:** Organize your workflows into logical tabs (e.g., "Dev", "Ops", "Guides").
+- **🗂 Automatic Subdivisions:** Group items within tabs by placing files in subdirectories (e.g., `work/git.zsh` becomes `[Work > Git]`).
+- **🤖 AI Automation:** Use the included [Prompts](prompts/generate_aliases.md) to generate aliases from your command history.
 - **🎨 Catppuccin Theme:** Built-in support for the high-contrast Catppuccin Mocha palette.
+
+---
+
+## 🤖 AI Automation
+
+You can automate the creation of your aliases using the system prompt found in `prompts/generate_aliases.md`. This is the fastest way to turn your command history into a searchable TUI interface.
+
+### Using Gemini CLI (Recommended)
+```bash
+history -n -50 | gemini -p "$(cat prompts/generate_aliases.md)" >> ~/.dotfiles/scripts/local/generated.zsh
+```
+
+### Using Claude Code
+```bash
+history -n -50 | claude -p "$(cat prompts/generate_aliases.md)" >> ~/.dotfiles/scripts/local/generated.zsh
+```
+
+### Using OpenAI CLI
+```bash
+history -n -50 | openai api chat.completions.create -m gpt-4o -g user "$(cat prompts/generate_aliases.md)" >> ~/.dotfiles/scripts/local/generated.zsh
+```
+
+*Tip: After generating new aliases, press **`r`** inside Shortcuts TUI to reload and see them instantly!*
+
+---
+
+## 🗂 Subdivisions & Organization
+
+Shortcuts TUI automatically organizes your items based on your directory structure. This is perfect for separating `local`, `work`, and `github` tools within the same tab.
+
+### How it works:
+1. **Directory Structure:**
+   ```text
+   ~/.dotfiles/scripts/
+   ├── local/
+   │   └── dev.zsh      # [Local > Dev]
+   └── work/
+       └── cloud.zsh    # [Work > Cloud]
+   ```
+2. **Display:** Items will be prefixed with their subdivision in the list: `[Local > Dev] My Shortcut`.
+3. **Ordering:** Items are automatically sorted by Subdivision, then Category (filename), then Title.
+4. **Filtering:** Subdivisions are searchable! Type `work` to instantly see all your work-related shortcuts.
 
 ---
 
@@ -60,7 +104,7 @@ mv shortcuts-tui /usr/local/bin/ # Or any directory in your $PATH
 
 ## ⚙️ Configuration
 
-By default, **Shortcuts TUI** looks for `~/.config/shortcuts/config.yaml`.
+By default, **Shortcuts TUI** looks for `~/.config/shortcuts-tui/config.yaml`.
 
 <details>
 <summary><b>Click to expand Configuration Details</b></summary>

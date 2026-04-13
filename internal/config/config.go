@@ -64,6 +64,7 @@ func LoadConfig() Config {
 	// Setup config file search paths
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
+	viper.AddConfigPath(filepath.Join(home, ".config", "shortcuts-tui"))
 	viper.AddConfigPath(filepath.Join(home, ".config", "shortcuts"))
 	viper.AddConfigPath(".")
 
